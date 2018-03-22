@@ -3,6 +3,7 @@
 import vtk
 import random
 import math
+import time
 
 shapeModel = [
     [[3, 2, 2],
@@ -65,25 +66,40 @@ def GetShapeActors(cube):
         for y, l2 in enumerate(l1):
             for z, val in enumerate(l2):
                 if(val not in shapes):
-                    shapes[val] = []
-                shapes[val].append([x, y, z])
+                    shapes[val] = {
+                        'fragments': [],
+                        'yMean': 0,
+                        'ySum' : 0
+                    }
+                shapes[val]['fragments'].append([x, y, z])
+                shapes[val]['ySum'] += y
+                shapes[val]['yMean'] = shapes[val]['ySum'] / len(shapes[val]['fragments'])
+
+
+    # Ordering the shape to make them falling
+    orderedShapes = sorted(shapes.values(), key=lambda shape:shape['yMean'])
 
     # Creating each shape
     actors = []
-    for key, fragments in shapes.items():
+    for key, shape in shapes.items():
         # Creating the actor
-        a = CreateShapeActor(fragments)
+        a = CreateShapeActor(shape['fragments'])
         a.GetProperty().SetColor(random.random(), random.random(), random.random())
         actors.append(a)
 
     return actors
 
-
 # Creating the actors shapes
 actors = GetShapeActors(shapeModel)
 
-# Creating a renderer 
+# Moving the actors out of the field of View
+trans = vtk.vtkTransform()
+trans.Translate(0, 10, 0)
 
+for actor in actors:
+    actor.SetUserTransform(trans)
+
+# Creating a renderer 
 ren = vtk.vtkRenderer()
 ren.SetBackground(1, 1, 1) # White background
 
@@ -94,12 +110,19 @@ for actor in actors:
 # Finally we create the render window
 renWin = vtk.vtkRenderWindow()
 
-# Adding the renderer to the window and setting the same camera for everybody
+# Adding the renderer to the window
 
 camera = vtk.vtkCamera()
-camera.SetPosition(0, 0, 10)
+camera.ParallelProjectionOn()
+camera.SetParallelScale(3.5)
+camera.SetPosition(7, 6, 7)
 center = len(shapeModel) / 2
 camera.SetFocalPoint(center, center, center)
+#modifying the light to have some shadow with ParallelProjection
+lightKit = vtk.vtkLightKit()
+lightKit.MaintainLuminanceOn()
+lightKit.AddLightsToRenderer(ren)
+renWin.AddRenderer(ren)
 
 ren.SetActiveCamera(camera)
 renWin.AddRenderer(ren)
@@ -117,9 +140,50 @@ ren.SetBackground(1, 1, 1)
 '''
 
 # used for interaction
+'''
 iren = vtk.vtkRenderWindowInteractor()
 iren.SetRenderWindow(renWin)
 
 iren.Initialize()
 renWin.Render()
 iren.Start()
+'''
+
+#
+# Now we make the shapes falling
+#
+fps = 33
+transitionTime = 2
+
+def pos(t):
+    if t > transitionTime:
+        t = transitionTime
+
+    return 1/2 * 9.81 * (transitionTime - t) * (transitionTime - t)
+
+actorsToMove = actors
+
+for actor in actorsToMove:
+    for i in range(transitionTime * fps):
+        time.sleep(1/fps)
+        renWin.Render()
+
+        t = i / fps
+        trans = vtk.vtkTransform()
+        trans.Translate(0, pos(t), 0)
+
+        actor.SetUserTransform(trans)
+        camera.Elevation(-0.03)
+        camera.SetParallelScale(camera.GetParallelScale() - 0.001)
+
+        
+
+'''
+# showing the shapes one by one
+trans = vtk.vtkTransform()
+trans.Translate(0, 0, 0)
+for actor in actors:
+    actor.SetUserTransform(trans)
+
+# renWin.Render()
+'''
