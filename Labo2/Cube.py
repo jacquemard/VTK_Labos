@@ -152,7 +152,6 @@ writer.SetFileName("cubeSteps.png")
 writer.SetInputConnection(imageFilter.GetOutputPort())
 writer.Write()
 
-
 # used for interaction
 iren = vtk.vtkRenderWindowInteractor()
 iren.SetRenderWindow(renWin)
