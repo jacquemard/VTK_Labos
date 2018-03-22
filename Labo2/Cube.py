@@ -106,33 +106,33 @@ renWin = vtk.vtkRenderWindow()
 
 # Number of column to display
 col = 2
-row = math.floor(len(actors)/col)
+row = math.ceil(len(actors)/col)
 colSize = 1 / col
-rowSize = 1 / (row + 1) 
+rowSize = 1 / row 
 
 # Steps
-for i in range(row):
-    for j in range(col):
-        renderIndex = i * col + j
-        ren = renderers[renderIndex]
-        #ren.SetActiveCamera(camera)
-        #ren.SetViewport(1 - rowSize - i * rowSize, j * colSize, 1 - i * rowSize, (j + 1) * colSize)
-        ren.SetViewport(j * colSize, 1 - rowSize - i * rowSize, (j + 1) * colSize, 1 - i * rowSize,)        
+for index in range(len(renderers)):
+    i = index % col
+    j = math.floor(index/col)
 
-# Solution 
-renderers[len(renderers) - 1].SetViewport(0, 0, 1,rowSize)
+    ren = renderers[index]
+    
+    if index == len(renderers) - 1 :# last shape
+        ren.SetViewport(i * colSize, 1 - rowSize - j * rowSize, 1, rowSize)  
+    else: 
+        ren.SetViewport(i * colSize, 1 - rowSize - j * rowSize, (i + 1) * colSize, 1 - j * rowSize)        
 
 # Adding the renderer to the window and setting the same camera for everybody
 
 camera = vtk.vtkCamera()
-camera.SetPosition(0, 0, 10)
+camera.SetPosition(5, 5, 10)
 center = len(shapeModel) / 2
 camera.SetFocalPoint(center, center, center)
 for ren in renderers:
     ren.SetActiveCamera(camera)
     renWin.AddRenderer(ren)
 
-renWin.SetSize(800, 600)
+renWin.SetSize(600, 800)
 
 
 '''
