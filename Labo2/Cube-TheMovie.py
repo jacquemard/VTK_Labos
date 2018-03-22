@@ -82,45 +82,17 @@ def GetShapeActors(cube):
 # Creating the actors shapes
 actors = GetShapeActors(shapeModel)
 
-# Creating a renderer for each step
-renderers = []
+# Creating a renderer 
 
-for i in range(len(actors)):
-    ren = vtk.vtkRenderer()
-    ren.SetBackground(1, 1, 1) # White background
-    renderers.append(ren)
+ren = vtk.vtkRenderer()
+ren.SetBackground(1, 1, 1) # White background
 
-    # Adding i actors
-    for j in range(i + 1):
-        # print(i)
-        ren.AddActor(actors[j])
+# Adding the actors
+for actor in actors:
+    ren.AddActor(actor)
 
-
-
-# Finally we create the render window which will show up on the screen
-# We put our renderer into the render window using AddRenderer. We
-# also set the size to be 800 pixels by 600.
+# Finally we create the render window
 renWin = vtk.vtkRenderWindow()
-
-# ---- Creating a viewport for every renderer
-
-# Number of column to display
-col = 2
-row = math.floor(len(actors)/col)
-colSize = 1 / col
-rowSize = 1 / (row + 1) 
-
-# Steps
-for i in range(row):
-    for j in range(col):
-        renderIndex = i * col + j
-        ren = renderers[renderIndex]
-        #ren.SetActiveCamera(camera)
-        #ren.SetViewport(1 - rowSize - i * rowSize, j * colSize, 1 - i * rowSize, (j + 1) * colSize)
-        ren.SetViewport(j * colSize, 1 - rowSize - i * rowSize, (j + 1) * colSize, 1 - i * rowSize,)        
-
-# Solution 
-renderers[len(renderers) - 1].SetViewport(0, 0, 1,rowSize)
 
 # Adding the renderer to the window and setting the same camera for everybody
 
@@ -128,9 +100,9 @@ camera = vtk.vtkCamera()
 camera.SetPosition(0, 0, 10)
 center = len(shapeModel) / 2
 camera.SetFocalPoint(center, center, center)
-for ren in renderers:
-    ren.SetActiveCamera(camera)
-    renWin.AddRenderer(ren)
+
+ren.SetActiveCamera(camera)
+renWin.AddRenderer(ren)
 
 renWin.SetSize(800, 600)
 
