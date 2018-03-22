@@ -5,6 +5,8 @@ import random
 import math
 import time
 
+MAKE_MOVIE = False
+
 shapeModel = [
     [[3, 2, 2],
      [2, 2, 5],
@@ -129,16 +131,6 @@ renWin.AddRenderer(ren)
 
 renWin.SetSize(800, 600)
 
-
-'''
-# Create the Renderer and assign actors to it. 
-ren = vtk.vtkRenderer()
-for actor in actors:
-    ren.AddActor(actor)
-
-ren.SetBackground(1, 1, 1)
-'''
-
 # used for interaction
 '''
 iren = vtk.vtkRenderWindowInteractor()
@@ -163,10 +155,31 @@ def pos(t):
 
 actorsToMove = actors
 
+# creating an image filter to make a video
+if MAKE_MOVIE:
+    imageFilter = vtk.vtkWindowToImageFilter()
+    imageFilter.SetInput(renWin)
+    imageFilter.SetInputBufferTypeToRGB()
+    # imageFilter.ReadFrontBufferOff()
+    imageFilter.Update()
+
+    # starting record
+    writer = None
+    writer = vtk.vtkOggTheoraWriter()
+    writer.SetInputConnection(imageFilter.GetOutputPort())
+    writer.SetFileName("Cube - The Movie.ogv")
+    writer.Start()
+
+
 for actor in actorsToMove:
     for i in range(transitionTime * fps):
         time.sleep(1/fps)
         renWin.Render()
+
+        #Export a single frame into the video
+        if MAKE_MOVIE:
+            imageFilter.Modified()
+            writer.Write()
 
         t = i / fps
         trans = vtk.vtkTransform()
@@ -176,14 +189,7 @@ for actor in actorsToMove:
         camera.Elevation(-0.03)
         camera.SetParallelScale(camera.GetParallelScale() - 0.001)
 
-        
 
-'''
-# showing the shapes one by one
-trans = vtk.vtkTransform()
-trans.Translate(0, 0, 0)
-for actor in actors:
-    actor.SetUserTransform(trans)
-
-# renWin.Render()
-'''
+# writing the video
+if MAKE_MOVIE:
+    writer.End()
