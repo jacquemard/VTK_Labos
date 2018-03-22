@@ -2,15 +2,9 @@
 # of the VTK commands to Python.
 import vtk
 import random
+import math
 
-def CreateVTKFragment():
-    fragment = vtk.vtkCubeSource()
-    fragment.SetXLength(1.0)
-    fragment.SetYLength(1.0)
-    fragment.SetZLength(1.0)
-    return fragment
-
-shapePieces = [
+shapeModel = [
     [[3, 2, 2],
      [2, 2, 5],
      [5, 5, 5]],
@@ -24,6 +18,12 @@ shapePieces = [
      [1, 1, 1]]
 ]
 
+def CreateVTKFragment():
+    fragment = vtk.vtkCubeSource()
+    fragment.SetXLength(1.0)
+    fragment.SetYLength(1.0)
+    fragment.SetZLength(1.0)
+    return fragment
 
 def CreateVTKShape(fragments):
     cubes = []
@@ -58,7 +58,7 @@ def CreateShapeActor(fragments):
 
 
 def GetShapeActors(cube):
-    # Getting fragments position
+    # Getting fragments position 
     shapes = {}
     for x, l1 in enumerate(cube):
         for y, l2 in enumerate(l1):
@@ -69,7 +69,7 @@ def GetShapeActors(cube):
 
     # Creating each shape
     actors = []
-    for key, fragments in shapes.iteritems():
+    for key, fragments in shapes.items():
         # Creating the actor
         a = CreateShapeActor(fragments)
         a.GetProperty().SetColor(random.random(), random.random(), random.random())
@@ -78,54 +78,70 @@ def GetShapeActors(cube):
     return actors
 
 
-# Create a piece within a 3x3 cube
-tPiece = [
-    [[True, True, True],
-     [False, True, False],
-     [False, False, False]],
+# Creating the actors shapes
+actors = GetShapeActors(shapeModel)
 
-    [[False, False, False],
-     [False, False, False],
-     [False, False, False]],
-     
-    [[False, False, False],
-     [False, False, False],
-     [False, False, False]]
-]
+# Creating a renderer for each step
+renderers = []
 
-def GetFragments(pieceModel):
-    fragments = []
-    for x, l1 in enumerate(pieceModel):
-        for y, l2 in enumerate(l1):
-            for z, val in enumerate(l2):
-                if(val):
-                    fragments.append([x, y, z])
-    return fragments
+for i in range(len(actors)):
+    ren = vtk.vtkRenderer()
+    ren.SetBackground(1, 1, 1) # White background
+    renderers.append(ren)
+
+    # Adding i actors
+    for j in range(i + 1):
+        # print(i)
+        ren.AddActor(actors[j])
 
 
-'''
-# Create an actor to represent the piece. 
-shapeActor = CreateShapeActor(tPiece)
-
-shapeActor.GetProperty().SetColor(0.5, 0.7, 0)
-'''
-
-# Creating the actors
-actors = GetShapeActors(shapePieces)
-
-# Create the Renderer and assign actors to it. 
-ren1 = vtk.vtkRenderer()
-for actor in actors:
-    ren1.AddActor(actor)
-
-ren1.SetBackground(0.1, 0.2, 0.4)
 
 # Finally we create the render window which will show up on the screen
 # We put our renderer into the render window using AddRenderer. We
-# also set the size to be 300 pixels by 300.
+# also set the size to be 800 pixels by 600.
 renWin = vtk.vtkRenderWindow()
-renWin.AddRenderer(ren1)
-renWin.SetSize(300, 300)
+
+# ---- Creating a viewport for every renderer
+
+# Number of column to display
+col = 2
+row = math.floor(len(actors)/col)
+colSize = 1 / col
+rowSize = 1 / (row + 1) 
+
+# Steps
+for i in range(row):
+    for j in range(col):
+        renderIndex = i * col + j
+        ren = renderers[renderIndex]
+        #ren.SetActiveCamera(camera)
+        #ren.SetViewport(1 - rowSize - i * rowSize, j * colSize, 1 - i * rowSize, (j + 1) * colSize)
+        ren.SetViewport(j * colSize, 1 - rowSize - i * rowSize, (j + 1) * colSize, 1 - i * rowSize,)        
+
+# Solution 
+renderers[len(renderers) - 1].SetViewport(0, 0, 1,rowSize)
+
+# Adding the renderer to the window and setting the same camera for everybody
+
+camera = vtk.vtkCamera()
+camera.SetPosition(0, 0, 10)
+camera.SetFocalPoint(1.5, 1.5, 1.5)
+for ren in renderers:
+    ren.SetActiveCamera(camera)
+    renWin.AddRenderer(ren)
+
+
+renWin.SetSize(800, 600)
+
+
+'''
+# Create the Renderer and assign actors to it. 
+ren = vtk.vtkRenderer()
+for actor in actors:
+    ren.AddActor(actor)
+
+ren.SetBackground(1, 1, 1)
+'''
 
 # used for interaction
 iren = vtk.vtkRenderWindowInteractor()
