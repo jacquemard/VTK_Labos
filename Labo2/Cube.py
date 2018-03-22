@@ -125,29 +125,47 @@ for index in range(len(renderers)):
 # Adding the renderer to the window and setting the same camera for everybody
 
 camera = vtk.vtkCamera()
-camera.SetPosition(5, 5, 10)
+camera.ParallelProjectionOn()
+camera.SetParallelScale(3)
+camera.SetPosition(7, 6, 7)
 center = len(shapeModel) / 2
 camera.SetFocalPoint(center, center, center)
 for ren in renderers:
     ren.SetActiveCamera(camera)
+    #modifying the light to have some shadow with ParallelProjection
+    lightKit = vtk.vtkLightKit()
+    lightKit.MaintainLuminanceOn()
+    lightKit.AddLightsToRenderer(ren)
     renWin.AddRenderer(ren)
 
 renWin.SetSize(600, 800)
 
+# output an image file
+imageFilter = vtk.vtkWindowToImageFilter()
+imageFilter.SetInput(renWin)
+imageFilter.SetScale(3)
+imageFilter.SetInputBufferTypeToRGBA()
+imageFilter.Update()
 
-'''
-# Create the Renderer and assign actors to it. 
-ren = vtk.vtkRenderer()
-for actor in actors:
-    ren.AddActor(actor)
+writer = vtk.vtkPNGWriter()
+writer.SetFileName("cubeSteps.png")
+writer.SetInputConnection(imageFilter.GetOutputPort())
+writer.Write()
 
-ren.SetBackground(1, 1, 1)
-'''
 
 # used for interaction
+iren = vtk.vtkRenderWindowInteractor()
+iren.SetRenderWindow(renWin)
+
+renWin.Render()
+iren.Start()
+
+# used for interaction
+'''
 iren = vtk.vtkRenderWindowInteractor()
 iren.SetRenderWindow(renWin)
 
 iren.Initialize()
 renWin.Render()
 iren.Start()
+'''
