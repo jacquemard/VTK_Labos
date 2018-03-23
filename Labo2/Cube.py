@@ -78,9 +78,33 @@ def GetShapeActors(cube):
 
     return actors
 
+def CreateCubeWireframeActor(fragments):
+    xSize = len(fragments)
+    ySize = len(fragments[0])
+    zSize = len(fragments[0][0])
+
+    #creating the source
+    cubeSource = vtk.vtkCubeSource()
+    cubeSource.SetBounds(0, xSize, 0, ySize, 0, zSize)
+
+    # making an actor
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(cubeSource.GetOutputPort())
+
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+
+    # wireframing the actor
+    actor.GetProperty().SetRepresentationToWireframe()
+
+    return actor
+
 
 # Creating the actors shapes
 actors = GetShapeActors(shapeModel)
+
+# Creating the cube wireframe
+wireframe = CreateCubeWireframeActor(shapeModel)
 
 # Creating a renderer for each step
 renderers = []
@@ -94,12 +118,12 @@ for i in range(len(actors)):
     for j in range(i + 1):
         # print(i)
         ren.AddActor(actors[j])
+    
+    # Adding the wireframe
+    ren.AddActor(wireframe)
 
 
-
-# Finally we create the render window which will show up on the screen
-# We put our renderer into the render window using AddRenderer. We
-# also set the size to be 800 pixels by 600.
+# Creating the render window
 renWin = vtk.vtkRenderWindow()
 
 # ---- Creating a viewport for every renderer
@@ -132,7 +156,7 @@ center = len(shapeModel) / 2
 camera.SetFocalPoint(center, center, center)
 for ren in renderers:
     ren.SetActiveCamera(camera)
-    #modifying the light to have some shadow with ParallelProjection
+    #modifying the light to have some shadows with ParallelProjection
     lightKit = vtk.vtkLightKit()
     lightKit.MaintainLuminanceOn()
     lightKit.AddLightsToRenderer(ren)
@@ -152,19 +176,9 @@ writer.SetFileName("cubeSteps.png")
 writer.SetInputConnection(imageFilter.GetOutputPort())
 writer.Write()
 
-# used for interaction
+# rendering
 iren = vtk.vtkRenderWindowInteractor()
 iren.SetRenderWindow(renWin)
 
 renWin.Render()
 iren.Start()
-
-# used for interaction
-'''
-iren = vtk.vtkRenderWindowInteractor()
-iren.SetRenderWindow(renWin)
-
-iren.Initialize()
-renWin.Render()
-iren.Start()
-'''
