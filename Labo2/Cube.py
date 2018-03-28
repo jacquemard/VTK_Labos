@@ -1,22 +1,45 @@
-# First we import the VTK Python package that will make available all
-# of the VTK commands to Python.
+#############################################
+## HEIG-VD - VTK - Labo Cube
+## Images de solutions
+## Rémi Jacquemard
+## 28.03.18
+#############################################
 import vtk
 import random
 import math
+import os
 
-shapeModel = [
-    [[3, 2, 2],
-     [2, 2, 5],
-     [5, 5, 5]],
+# We here load the shapes from the file
+def loadSolution(filename):
+    solutions = []
 
-    [[3, 0, 4],
-     [3, 0, 4],
-     [3, 1, 4]],
-     
-    [[6, 0, 4],
-     [6, 6, 6],
-     [1, 1, 1]]
-]
+    shapesFile = open(filename, mode='r')
+    endFace = False
+    currentFace = []
+    currentCube = []
+    for line in shapesFile:
+        if line == '\n':
+            if endFace: # end of a solution
+                solutions.append(currentCube)
+                currentCube = []
+                endFace = False
+            else: # end of a face
+                currentCube.append(currentFace)
+                currentFace = []
+                endFace = True
+
+        else:
+            endFace = False
+            values = line.split()
+            currentLine = []
+            for value in values:
+                currentLine.append(int(value))
+            currentFace.append(currentLine)
+
+
+    shapesFile.close()
+    return solutions
+
 
 def CreateVTKFragment():
     fragment = vtk.vtkCubeSource()
@@ -100,83 +123,92 @@ def CreateCubeWireframeActor(fragments):
     return actor
 
 
-# Creating the actors shapes
-actors = GetShapeActors(shapeModel)
-
-# Creating the cube wireframe
-wireframe = CreateCubeWireframeActor(shapeModel)
-
-# Creating a renderer for each step
-renderers = []
-
-for i in range(len(actors)):
-    ren = vtk.vtkRenderer()
-    ren.SetBackground(1, 1, 1) # White background
-    renderers.append(ren)
-
-    # Adding i actors
-    for j in range(i + 1):
-        # print(i)
-        ren.AddActor(actors[j])
-    
-    # Adding the wireframe
-    ren.AddActor(wireframe)
-
+# Loading the shapes from the file
+solutions = loadSolution(r"C:\Users\Remi\OneDrive\HEIG\Cours\S6\VTK\VTK_Labos\Labo2\solutions.txt")
 
 # Creating the render window
 renWin = vtk.vtkRenderWindow()
-
-# ---- Creating a viewport for every renderer
-
-# Number of column to display
-col = 2
-row = math.ceil(len(actors)/col)
-colSize = 1 / col
-rowSize = 1 / row 
-
-# Steps
-for index in range(len(renderers)):
-    i = index % col
-    j = math.floor(index/col)
-
-    ren = renderers[index]
-    
-    if index == len(renderers) - 1 :# last shape
-        ren.SetViewport(i * colSize, 1 - rowSize - j * rowSize, 1, rowSize)  
-    else: 
-        ren.SetViewport(i * colSize, 1 - rowSize - j * rowSize, (i + 1) * colSize, 1 - j * rowSize)        
-
-# Adding the renderer to the window and setting the same camera for everybody
-
-camera = vtk.vtkCamera()
-camera.ParallelProjectionOn()
-camera.SetParallelScale(3)
-camera.SetPosition(7, 6, 7)
-center = len(shapeModel) / 2
-camera.SetFocalPoint(center, center, center)
-for ren in renderers:
-    ren.SetActiveCamera(camera)
-    #modifying the light to have some shadows with ParallelProjection
-    lightKit = vtk.vtkLightKit()
-    lightKit.MaintainLuminanceOn()
-    lightKit.AddLightsToRenderer(ren)
-    renWin.AddRenderer(ren)
-
 renWin.SetSize(600, 800)
 
-# output an image file
-imageFilter = vtk.vtkWindowToImageFilter()
-imageFilter.SetInput(renWin)
-imageFilter.SetScale(3)
-imageFilter.SetInputBufferTypeToRGBA()
-imageFilter.Update()
+# Creating solutions folder if not exists
+if not os.path.exists("solutions"):
+    os.makedirs("solutions")
 
-writer = vtk.vtkPNGWriter()
-writer.SetFileName("cubeSteps.png")
-writer.SetInputConnection(imageFilter.GetOutputPort())
-writer.Write()
+for shapeModelIndex, shapeModel in enumerate(solutions):
 
-# rendering
+    # Creating the actors shapes
+    actors = GetShapeActors(shapeModel)
+
+    # Creating the cube wireframe
+    wireframe = CreateCubeWireframeActor(shapeModel)
+
+    # Creating a renderer for each step
+    renderers = []
+
+    for i in range(len(actors)):
+        ren = vtk.vtkRenderer()
+        ren.SetBackground(1, 1, 1) # White background
+        renderers.append(ren)
+
+        # Adding i actors
+        for j in range(i + 1):
+            # print(i)
+            ren.AddActor(actors[j])
+        
+        # Adding the wireframe
+        ren.AddActor(wireframe)
+
+    # ---- Creating a viewport for every renderer
+    # Number of column to display
+    col = 2
+    row = math.ceil(len(actors)/col)
+    colSize = 1 / col
+    rowSize = 1 / row 
+
+    # Steps viewports
+    for index in range(len(renderers)):
+        i = index % col
+        j = math.floor(index/col)
+
+        ren = renderers[index]
+        
+        if index == len(renderers) - 1 :# last shape
+            ren.SetViewport(i * colSize, 1 - rowSize - j * rowSize, 1, rowSize)  
+        else: 
+            ren.SetViewport(i * colSize, 1 - rowSize - j * rowSize, (i + 1) * colSize, 1 - j * rowSize)        
+
+    # Adding the renderer to the window and setting the same camera for everybody
+    camera = vtk.vtkCamera()
+    camera.ParallelProjectionOn()
+    camera.SetParallelScale(3)
+    camera.SetPosition(7, 6, 7)
+    center = len(shapeModel) / 2
+    camera.SetFocalPoint(center, center, center)
+    for ren in renderers:
+        ren.SetActiveCamera(camera)
+        #modifying the light to have some shadows with ParallelProjection
+        lightKit = vtk.vtkLightKit()
+        lightKit.MaintainLuminanceOn()
+        lightKit.AddLightsToRenderer(ren)
+        renWin.AddRenderer(ren)
+
+
+    # output an image file
+    renWin.Render()
+    imageFilter = vtk.vtkWindowToImageFilter()
+    imageFilter.SetInput(renWin)
+    imageFilter.SetScale(3)
+    imageFilter.SetInputBufferTypeToRGBA()
+    imageFilter.Update()
+
+    writer = vtk.vtkPNGWriter()
+    writer.SetFileName("solutions/cubeSteps" + str(shapeModelIndex) + ".png")
+    writer.SetInputConnection(imageFilter.GetOutputPort())
+    
+    writer.Write()
+    
+
+# rendering with interactif
 iren = vtk.vtkRenderWindowInteractor()
 iren.SetRenderWindow(renWin)
 

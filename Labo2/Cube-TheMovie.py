@@ -1,25 +1,52 @@
-# First we import the VTK Python package that will make available all
-# of the VTK commands to Python.
+#############################################
+## HEIG-VD - VTK - Labo Cube
+## Cube - The Movie
+## Rémi Jacquemard
+## 28.03.18
+#############################################
+
+# Imports
 import vtk
 import random
 import math
 import time
 
+# True if we want to output the video file, False otherwise
 MAKE_MOVIE = False
 
-shapeModel = [
-    [[3, 2, 2],
-     [2, 2, 5],
-     [5, 5, 5]],
+# We here load a unique solution from the file
+# Adapted from Cube.py
+def loadSolution(filename):
+    solutions = []
 
-    [[3, 0, 4],
-     [3, 0, 4],
-     [3, 1, 4]],
-     
-    [[6, 0, 4],
-     [6, 6, 6],
-     [1, 1, 1]]
-]
+    shapesFile = open(filename, mode='r')
+    endFace = False
+    currentFace = []
+    currentCube = []
+    for line in shapesFile:
+        if line == '\n':
+            if endFace: #end of a solution
+                solutions.append(currentCube)
+                currentCube = []
+                endFace = False
+                break
+            else: # end of a face
+                currentCube.append(currentFace)
+                currentFace = []
+                endFace = True
+
+        else:
+            endFace = False
+            values = line.split()
+            currentLine = []
+            for value in values:
+                currentLine.append(int(value))
+            currentFace.append(currentLine)
+
+
+    shapesFile.close()
+    return solutions
+
 
 def CreateVTKFragment():
     fragment = vtk.vtkCubeSource()
@@ -66,30 +93,33 @@ def GetShapeActors(cube):
     shapes = {}
     for x, l1 in enumerate(cube):
         for y, l2 in enumerate(l1):
-            for z, val in enumerate(l2):
-                if(val not in shapes):
-                    shapes[val] = {
+            for z, shapeIndex in enumerate(l2):
+                if(shapeIndex not in shapes):
+                    shapes[shapeIndex] = {
                         'fragments': [],
                         'yMean': 0,
                         'ySum' : 0
                     }
-                shapes[val]['fragments'].append([x, y, z])
-                shapes[val]['ySum'] += y
-                shapes[val]['yMean'] = shapes[val]['ySum'] / len(shapes[val]['fragments'])
-
+                shapes[shapeIndex]['fragments'].append([x, y, z])
+                shapes[shapeIndex]['ySum'] += y
+                shapes[shapeIndex]['yMean'] = shapes[shapeIndex]['ySum'] / len(shapes[shapeIndex]['fragments'])
 
     # Ordering the shape to make them falling
     orderedShapes = sorted(shapes.values(), key=lambda shape:shape['yMean'])
 
     # Creating each shape
     actors = []
-    for key, shape in shapes.items():
+    for shape in orderedShapes:
         # Creating the actor
         a = CreateShapeActor(shape['fragments'])
         a.GetProperty().SetColor(random.random(), random.random(), random.random())
         actors.append(a)
 
     return actors
+
+# Loading the shapes from the file
+solutions = loadSolution(r"C:\Users\Remi\OneDrive\HEIG\Cours\S6\VTK\VTK_Labos\Labo2\solutions.txt")
+shapeModel = solutions[0] # making a video for the 1st solutions
 
 # Creating the actors shapes
 actors = GetShapeActors(shapeModel)
