@@ -118,7 +118,7 @@ def GetShapeActors(cube):
     return actors
 
 # Loading the shapes from the file
-solutions = loadSolution(r"C:\Users\Remi\OneDrive\HEIG\Cours\S6\VTK\VTK_Labos\Labo2\solutions.txt")
+solutions = loadSolution("solutions.txt")
 shapeModel = solutions[0] # making a video for the 1st solutions
 
 # Creating the actors shapes
@@ -147,7 +147,7 @@ renWin = vtk.vtkRenderWindow()
 camera = vtk.vtkCamera()
 camera.ParallelProjectionOn()
 camera.SetParallelScale(3.5)
-camera.SetPosition(7, 6, 7)
+camera.SetPosition(7, 5, 7)
 center = len(shapeModel) / 2
 camera.SetFocalPoint(center, center, center)
 #modifying the light to have some shadow with ParallelProjection
@@ -180,8 +180,8 @@ transitionTime = 2
 def pos(t):
     if t > transitionTime:
         t = transitionTime
-
-    return 1/2 * 9.81 * (transitionTime - t) * (transitionTime - t)
+    # making them falling slower and slower
+    return 1/2 * 10 * (transitionTime - t) * (transitionTime - t)
 
 actorsToMove = actors
 
@@ -216,8 +216,8 @@ for actor in actorsToMove:
         trans.Translate(0, pos(t), 0)
 
         actor.SetUserTransform(trans)
-        camera.Elevation(-0.03)
-        camera.SetParallelScale(camera.GetParallelScale() - 0.001)
+        camera.Elevation(0.04)
+        camera.SetParallelScale(camera.GetParallelScale() + 0.001)
 
 
 # writing the video
