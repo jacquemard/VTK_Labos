@@ -15,6 +15,30 @@ import time
 MAKE_MOVIE = False
 
 # We here load a unique solution from the file
+# We here load the shapes from the file
+# The solutions have been formated as it follows:
+'''
+5 5 1 
+5 1 1 
+5 6 1 
+
+2 2 3 
+0 0 3 
+0 6 3 
+
+4 2 2 
+4 4 4 
+6 6 3 
+
+
+'''
+# Where each shape is specified with a unique number. 
+# Each face (front, middle, back) is seperated by a blank line
+# Each solution is seperated by two blank line
+# Having such a format is usefull to be generalizable. For example,
+# a 3x5x2 cube is easily representable with this format. It is 
+# possible to have different formats for each solution too.
+# Note: The end of the file has to have 3 blank lines
 # Adapted from Cube.py
 def loadSolution(filename):
     solutions = []

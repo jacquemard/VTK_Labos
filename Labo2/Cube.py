@@ -10,6 +10,29 @@ import math
 import os
 
 # We here load the shapes from the file
+# The solutions have been formated as it follows:
+'''
+5 5 1 
+5 1 1 
+5 6 1 
+
+2 2 3 
+0 0 3 
+0 6 3 
+
+4 2 2 
+4 4 4 
+6 6 3 
+
+
+'''
+# Where each shape is specified with a unique number. 
+# Each face (front, middle, back) is seperated by a blank line
+# Each solution is seperated by two blank line
+# Having such a format is usefull to be generalizable. For example,
+# a 3x5x2 cube is easily representable with this format. It is 
+# possible to have different formats for each solution too.
+# Note: The end of the file has to have 3 blank lines
 def loadSolution(filename):
     solutions = []
 
@@ -158,7 +181,7 @@ for shapeModelIndex, shapeModel in enumerate(solutions):
         # Adding the wireframe
         ren.AddActor(wireframe)
 
-    # ---- Creating a viewport for every renderer
+    # ---- Creating a viewport for each renderer
     # Number of column to display
     col = 2
     row = math.ceil(len(actors)/col)
@@ -206,6 +229,10 @@ for shapeModelIndex, shapeModel in enumerate(solutions):
     writer.SetInputConnection(imageFilter.GetOutputPort())
     
     writer.Write()
+
+    # Cleaning
+    for renderer in renderers:
+        renWin.RemoveRenderer(renderer)
     
 
 # rendering with interactif
