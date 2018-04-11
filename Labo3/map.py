@@ -1,20 +1,19 @@
-#imports
+# imports
 import vtk
+
 
 def createActor(filename):
     # importing file
     file = open(filename)
     xSize, ySize = [int(i) for i in file.readline().split()]
 
-    print(xSize)
-    print(ySize)
-
     # creating geometry
     points = vtk.vtkPoints()
     for x in range(xSize):
+        altitude = file.readline().split()
         for y in range(ySize):
-            points.InsertNextPoint(x, y, 0)
-    
+            points.InsertNextPoint(x, y, int(altitude[y])/7)
+
     # creating dataset with implicit topology
     grid = vtk.vtkStructuredGrid()
     grid.SetDimensions(xSize, ySize, 1)
@@ -29,9 +28,8 @@ def createActor(filename):
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
 
-
-
     return actor
+
 
 actor = createActor("altitudes.txt")
 
