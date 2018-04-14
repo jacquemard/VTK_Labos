@@ -16,15 +16,22 @@ def main():
     file = open("altitudes.txt", "r")
     
     xSize, ySize = [int(i) for i in file.readline().split()]
+    radius = 6371009
+    phi_min = 45
+    phi_max = 47.5
+    theta_min = 5
+    theta_max = 7.5
 
     # creating geometry
     points = vtk.vtkPoints()
     altitudes = vtk.vtkIntArray()
+
     for x in range(xSize):
         altitude = file.readline().split()
         for y in range(ySize):
-            points.InsertNextPoint(x, y, int(altitude[y])/4)
-            altitudes.InsertNextValue(int(altitude[y]))
+            z = int(altitude[y])
+            points.InsertNextPoint(x, y, z)
+            altitudes.InsertNextValue(z)
     file.close() 
 
     # creating dataset with implicit topology
@@ -51,6 +58,9 @@ def main():
     mapper.SetLookupTable(colorTable)
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
+
+    t = vtk.vtkSphericalTransform()
+    actor.SetUserTransform(t)
 
     # Create the renderer 
     ren1= vtk.vtkRenderer()
