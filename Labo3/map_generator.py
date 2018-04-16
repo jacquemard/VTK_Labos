@@ -12,9 +12,9 @@ import os
 import numpy as np
 
 # defining the see level
-see_level = 370
+sea_level = 0
 
-# exporting as a map
+# exporting png
 export_map = False
 
 def export_png(renWin, filename):
@@ -64,10 +64,24 @@ def main():
     min_alt = None
     max_alt = None
 
+    def compute_point(x, y, z):
+        t = vtk.vtkTransform()
+
+        # Place the point
+        t.RotateX(phi_min + delta_phi * x)
+        t.RotateY(theta_max - delta_theta * y)
+        t.Translate(0, 0, radius + z)
+
+        # Apply transformation
+        p_in = [0, 0, 0, 1]
+        p_out = [0, 0, 0, 1]
+        t.MultiplyPoint(p_in, p_out)
+        return p_out
+
     for y in range(ySize):
         altitude = file.readline().split()
         if y % 100 == 0:
-            print('Preparing y = ' + str(y))
+            print('Computing y = ' + str(y))
 
         for x in range(xSize):
             #print("RotateX:", delta_phi*x + phi_min)
@@ -97,19 +111,9 @@ def main():
 
             #alt = altitudes_xy[x, y]
             
-            z = radius + alt
+            #z = radius + alt
 
-            t = vtk.vtkTransform()
-
-            # Place the point
-            t.RotateX(phi_min + delta_phi*x)
-            t.RotateY(theta_max - delta_theta*y)
-            t.Translate(0, 0, z)
-
-            # Apply transformation
-            p_in = [0, 0, 0, 1]
-            p_out = [0, 0, 0, 1]
-            t.MultiplyPoint(p_in, p_out)
+            p_out = compute_point(x, y, alt)
             
 
             #print("p:", p_out[0], p_out[1], p_out[2])
@@ -149,8 +153,8 @@ def main():
                         for j in range(3):
                             altitudes.SetValue((y - j) * ySize + (x - i), 0)
 
-            # see level
-            if alt < see_level:
+            # sea level
+            if alt < sea_level:
                 altitudes.SetValue(index, 0)
             '''
             if (x >= 2 
@@ -202,7 +206,7 @@ def main():
     #colorTable.SetTableRange(min_alt, max_alt)
     #colorTable.SetTableValue(min_alt, 0, 0, 0, 1)
     #colorTable.SetTableValue(max_alt, 1, 1, 1, 1)
-    # Water is set to 0m (see-level) as an altitude
+    # Water is set to 0m (sea-level) as an altitude
     colorTable.SetBelowRangeColor(0.513, 0.49, 1)
     colorTable.UseBelowRangeColorOn()
     colorTable.Build()
@@ -216,24 +220,56 @@ def main():
     actor.SetMapper(mapper)
 
     # Create the renderer
-    ren1 = vtk.vtkRenderer()
-    ren1.AddActor(actor)
-    ren1.SetBackground(1, 1, 1)
+    ren = vtk.vtkRenderer()
+    ren.AddActor(actor)
+    ren.SetBackground(1, 1, 1)
+
+
+    # Moving the camera
+    #'''
+    camera = vtk.vtkCamera()
+    distance = 600000
+    center_high = compute_point(xSize/2, ySize/2, distance)[0:3]
+    camera.SetPosition(center_high)
+    center = compute_point(xSize/2, ySize/2, 0)[0:3]
+    camera.SetFocalPoint(center)
+    camera.SetRoll(83.7)
+    camera.SetClippingRange(1, 100000000)
+
+    # print(center_high)
+
+    #camera.SetPosition(693738.8125, -4572871.75, 5173499.780277414)
+    #camera.SetFocalPoint(693738.8125, -4572871.75, 4377939.5)
+    
+    ren.SetActiveCamera(camera)
+    #camera.SetPosition(center_high)
+    #camera.SetClippingRange(0, distance * 2)
+    #'''
 
     # Add the renderer to the window
     renWin = vtk.vtkRenderWindow()
-    renWin.AddRenderer(ren1)
-    renWin.SetSize(1200, 700)
+    renWin.AddRenderer(ren)
+    renWin.SetSize(900, 900)
+
     renWin.Render()
 
-    if export_map:
-        export_png(renWin, "370see.png")
+    '''
+    camera = ren.GetActiveCamera()
+    print(camera.GetPosition())
+    print(camera.GetFocalPoint())
+    print(camera.GetClippingRange())
+    '''    
 
-   # start the interaction window and add TrackBall Style
+    if export_map:
+        export_png(renWin, str(sea_level) + "sea.png")
+
+    # start the interaction window and add TrackBall Style
+    #'''
     iren = vtk.vtkRenderWindowInteractor()
     iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
     iren.SetRenderWindow(renWin)
     iren.Start()
+    #'''
 
 if __name__ == '__main__':
     main()
