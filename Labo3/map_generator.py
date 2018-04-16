@@ -38,12 +38,15 @@ def main():
     min_alt = None
     max_alt = None
 
-    for x in range(xSize):
+    for y in range(ySize):
         altitude = file.readline().split()
-        for y in range(ySize):
+        if y % 100 == 0:
+            print('Preparing y = ' + str(y))
+
+        for x in range(xSize):
             #print("RotateX:", delta_phi*x + phi_min)
             #print("RotateY:", delta_theta*y + theta_min)
-            alt = int(altitude[y])
+            alt = int(altitude[x])
 
             #altitudes_xy[x, y] = alt
             #altitudes_xy_water[x, y] = alt
@@ -67,22 +70,27 @@ def main():
                 max_alt = alt
 
             #alt = altitudes_xy[x, y]
+            
             z = radius + alt
 
             t = vtk.vtkTransform()
 
             # Place the point
-            t.RotateX(delta_phi*x + phi_min)
-            t.RotateY(delta_theta*y + theta_min)
+            t.RotateX(phi_min + delta_phi*x)
+            t.RotateY(theta_max - delta_theta*y)
             t.Translate(0, 0, z)
 
             # Apply transformation
             p_in = [0, 0, 0, 1]
             p_out = [0, 0, 0, 1]
             t.MultiplyPoint(p_in, p_out)
+            
 
             #print("p:", p_out[0], p_out[1], p_out[2])
             points.InsertNextPoint(p_out[0], p_out[1], p_out[2])
+            '''
+            points.InsertNextPoint(x, y, alt)
+            '''
 
             # Updating altitudes
             alt_water = alt
@@ -91,18 +99,20 @@ def main():
             
             
             # checking for a square (unoising)
-            alt_delta = 1
+            '''
+            alt_delta = 0
             if (altitudes_north[x] - alt_delta <= alt <= altitudes_north[x] + alt_delta
                 and x > 0 and altitudes_north[x - 1] - alt_delta <= alt <= altitudes_north[x - 1] + alt_delta
                 and altitude_west - alt_delta <= alt <= altitude_west + alt_delta):
                 altitudes.SetValue((y - 1) * xSize + x, 0)
                 altitudes.SetValue(index - 1, 0)
                 alt_water = 0
-            '''
-            if altitude_west == alt:
-                altitudes.SetValue(index - 1, 0)
-                alt_water = 0
-            '''
+            #'''
+            
+            #if altitude_west == alt:
+            #    altitudes.SetValue(index - 1, 0)
+            #    alt_water = 0
+
             
 
             altitudes.SetValue(index, alt_water)
@@ -125,8 +135,8 @@ def main():
     colorTable = vtk.vtkColorTransferFunction()
     colorTable.AdjustRange([min_alt, max_alt])
     colorTable.AddRGBPoint(min_alt, 0.185, 0.67, 0.29)
-    colorTable.AddRGBPoint(500, 0.839, 0.812, 0.624)
-    colorTable.AddRGBPoint(1000, 0.84, 0.84, 0.84)
+    colorTable.AddRGBPoint(1000, 0.839, 0.812, 0.624)
+    colorTable.AddRGBPoint(2000, 0.84, 0.84, 0.84)
     colorTable.AddRGBPoint(max_alt, 1, 1, 1)
     #colorTable.SetTableRange(min_alt, max_alt)
     #colorTable.SetTableValue(min_alt, 0, 0, 0, 1)
@@ -152,7 +162,7 @@ def main():
     # Add the renderer to the window
     renWin = vtk.vtkRenderWindow()
     renWin.AddRenderer(ren1)
-    renWin.SetSize(1200, 950)
+    renWin.SetSize(1200, 700)
     renWin.Render()
 
    # start the interaction window and add TrackBall Style
