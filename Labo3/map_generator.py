@@ -11,6 +11,24 @@ import math
 import os
 import numpy as np
 
+# defining the see level
+see_level = 370
+
+# exporting as a map
+export_map = False
+
+def export_png(renWin, filename):
+    imageFilter = vtk.vtkWindowToImageFilter()
+    imageFilter.SetInput(renWin)
+    imageFilter.SetScale(3)
+    imageFilter.SetInputBufferTypeToRGBA()
+    imageFilter.Update()
+
+    writer = vtk.vtkPNGWriter()
+    writer.SetFileName(filename)
+    writer.SetInputConnection(imageFilter.GetOutputPort())
+    
+    writer.Write()
 
 def main():
     # Get the solutions
@@ -101,10 +119,11 @@ def main():
             '''
 
             # Updating altitudes
-            alt_water = alt
+            # alt_water = alt
             index = y * xSize + x
             #print(alt)
             
+            altitudes.SetValue(index, alt)
             
             # checking for a square 3x3 (unoising)
             altitudes_y3[2, x] = alt # updating box
@@ -130,7 +149,9 @@ def main():
                         for j in range(3):
                             altitudes.SetValue((y - j) * ySize + (x - i), 0)
 
-
+            # see level
+            if alt < see_level:
+                altitudes.SetValue(index, 0)
             '''
             if (x >= 2 
                 and altitudes_north[x - 2] == alt and
@@ -153,7 +174,6 @@ def main():
             #    alt_water = 0
             '''
             
-            altitudes.SetValue(index, alt_water)
 
             # Updating north and west altitudes value
             # altitude_west = alt
@@ -206,12 +226,17 @@ def main():
     renWin.SetSize(1200, 700)
     renWin.Render()
 
+    if export_map:
+        export_png(renWin, "370see.png")
+
    # start the interaction window and add TrackBall Style
     iren = vtk.vtkRenderWindowInteractor()
     iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
     iren.SetRenderWindow(renWin)
     iren.Start()
 
-
 if __name__ == '__main__':
     main()
+
+
+    
