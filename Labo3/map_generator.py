@@ -25,8 +25,16 @@ def main():
     delta_phi = (phi_max - phi_min)/xSize
     delta_theta = (theta_max - theta_min)/ySize
 
+
+    altitudes_y3 = np.zeros([3, xSize], dtype=np.uint16)
+    # print(altitudes_y3)
+
+    '''
     altitudes_north = np.zeros(xSize, dtype=np.uint16)
+    altitudes_north_2 = np.zeros(xSize, dtype=np.uint16)
     altitude_west = 0
+    altitude_west_2 = 0
+    '''
 
     # creating geometry
     points = vtk.vtkPoints()
@@ -98,30 +106,63 @@ def main():
             #print(alt)
             
             
-            # checking for a square (unoising)
+            # checking for a square 3x3 (unoising)
+            altitudes_y3[2, x] = alt # updating box
+
+            if x >= 2 and y >= 2:
+                box = altitudes_y3[...,x - 2 : x + 1]
+                # print(box)
+                val = box[0, 0]
+                ok = True
+
+                for i in range(3):
+                    for j in range(3):
+                        if val != box[i, j]:
+                            ok = False
+                            break
+                    if not ok:
+                        break
+
+                if ok:
+                    #print('x, y: ' + str(x) + " " + str(y))
+                    #print(box)
+                    for i in range(3):
+                        for j in range(3):
+                            altitudes.SetValue((y - j) * ySize + (x - i), 0)
+
+
             '''
-            alt_delta = 0
+            if (x >= 2 
+                and altitudes_north[x - 2] == alt and
+                and altitudes_north[x - 1] == alt and
+                altitudes_north[x] == alt and 
+                altitude_west == alt):
+
+                altitudes.SetValue((y - 1) * xSize + x, 0)
+                altitudes.SetValue(index - 1, 0)
+                alt_water = 0
+            '''
+            '''
             if (altitudes_north[x] - alt_delta <= alt <= altitudes_north[x] + alt_delta
                 and x > 0 and altitudes_north[x - 1] - alt_delta <= alt <= altitudes_north[x - 1] + alt_delta
                 and altitude_west - alt_delta <= alt <= altitude_west + alt_delta):
                 altitudes.SetValue((y - 1) * xSize + x, 0)
                 altitudes.SetValue(index - 1, 0)
-                alt_water = 0
-            #'''
-            
             #if altitude_west == alt:
             #    altitudes.SetValue(index - 1, 0)
             #    alt_water = 0
-
+            '''
             
-
             altitudes.SetValue(index, alt_water)
-            
 
             # Updating north and west altitudes value
-            altitude_west = alt
-            altitudes_north[x] = alt
+            # altitude_west = alt
+            # altitudes_north[x] = alt
 
+        # updating y3
+        altitudes_y3[0] = altitudes_y3[1]
+        altitudes_y3[1] = altitudes_y3[2]
+        altitudes_y3[2] = np.zeros(xSize)
 
     file.close()
 
