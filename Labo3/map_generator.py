@@ -36,12 +36,12 @@ def main():
 
     xSize, ySize = [int(i) for i in file.readline().split()]
     radius = 6371009
-    phi_min = 45
-    phi_max = 47.5
-    theta_min = 5
-    theta_max = 7.5
-    delta_phi = (phi_max - phi_min)/xSize
-    delta_theta = (theta_max - theta_min)/ySize
+    lat_min = 45
+    lat_max = 47.5
+    long_min = 5
+    long_max = 7.5
+    delta_lat = (lat_max - lat_min)/ySize
+    delta_long = (long_max - long_min)/xSize
 
 
     altitudes_y3 = np.zeros([3, xSize], dtype=np.uint16)
@@ -65,17 +65,31 @@ def main():
     max_alt = None
 
     def compute_point(x, y, z):
+        #'''
         t = vtk.vtkTransform()
+        t.PostMultiply()
 
         # Place the point
-        t.RotateX(phi_min + delta_phi * x)
-        t.RotateY(theta_max - delta_theta * y)
-        t.Translate(0, 0, radius + z)
+        t.RotateY(-lat_min + delta_lat * y)
+        t.RotateZ(long_min + delta_long * x)
+
+        p_in = [radius + z, 0, 0]
+        p_out = [0, 0, 0]
+        t.TransformPoint(p_in, p_out)
+
+        #print(p_out)
+
+        ''' 
+
+        t = vtk.vtkSphericalTransform()
 
         # Apply transformation
-        p_in = [0, 0, 0, 1]
-        p_out = [0, 0, 0, 1]
-        t.MultiplyPoint(p_in, p_out)
+        p_in = [radius + z, math.radians(lat_min + delta_lat * y), math.radians(long_min + delta_long * x)]
+        p_out = [0, 0, 0]
+        t.TransformPoint(p_in, p_out)
+        #'''
+        #print(p_out)
+        #input()
         return p_out
 
     for y in range(ySize):
@@ -233,7 +247,7 @@ def main():
     camera.SetPosition(center_high)
     center = compute_point(xSize/2, ySize/2, 0)[0:3]
     camera.SetFocalPoint(center)
-    camera.SetRoll(83.7)
+    camera.SetRoll(266)
     camera.SetClippingRange(1, 100000000)
 
     # print(center_high)
@@ -258,7 +272,7 @@ def main():
     print(camera.GetPosition())
     print(camera.GetFocalPoint())
     print(camera.GetClippingRange())
-    '''    
+    #'''   
 
     if export_map:
         export_png(renWin, str(sea_level) + "sea.png")
