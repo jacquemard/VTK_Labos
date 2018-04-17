@@ -69,8 +69,19 @@ def main():
     grid.GetPointData().SetScalars(altitudes)
 
     # Init our LUT table to find the colors
+    nc = vtk.vtkNamedColors()
     colorTable = vtk.vtkLookupTable()
     colorTable.SetTableRange(minz, maxz)
+    colorTable.SetNumberOfColors(9) 
+    colorTable.SetTableValue(0, 0, 0.4, 0.8, 1)
+    colorTable.SetTableValue(1, 0, 0.75, 0.2, 1)
+    colorTable.SetTableValue(2, 0.25, 0.625, 0.5, 1)
+    colorTable.SetTableValue(3, 0, 0.5, 0.25, 1)
+    colorTable.SetTableValue(4, 0.5, 0.365, 0, 1)
+    colorTable.SetTableValue(5, 0.75, 0.625, 0.25, 1)
+    colorTable.SetTableValue(6, 1, 0.75, 0.625, 1)
+    colorTable.SetTableValue(7, 1, 0.75, 0.5, 1)
+    colorTable.SetTableValue(8, 1, 1, 1, 1)
     colorTable.Build()
 
     # Create a mapper and actor
