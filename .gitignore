@@ -105,3 +105,6 @@ ENV/
 .vscode/
 
 *.docx
+
+# because François sucks
+.DS_Store
