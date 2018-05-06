@@ -6,6 +6,7 @@
 #############################################
 
 import vtk
+import antigravity
 
 
 def load_image_data():
