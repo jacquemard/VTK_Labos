@@ -83,8 +83,6 @@ def create_renderer_2(bone, skin):
     clipper = vtk.vtkClipDataSet()
     clipper.SetClipFunction(sphere)
     clipper.SetInputConnection(skin.GetOutputPort())
-    #clipper.SetValue(0)
-    #clipper.Update()
     skin = clipper
 
     # creating actors
@@ -102,6 +100,46 @@ def create_renderer_2(bone, skin):
 
     # creating renderer
     ren = create_renderer([bone_actor, frontface_actor, backface_actor])
+    ren.SetBackground(1, 1, 1)
+
+    return ren
+
+def create_renderer_3(bone, skin):
+    # creating the sphere clipping
+    radius = 60
+    center = [70, 30, 100]
+    sphere = vtk.vtkSphere()
+    sphere.SetRadius(radius)
+    sphere.SetCenter(center)
+
+    # clipping
+    clipper = vtk.vtkClipDataSet()
+    clipper.SetClipFunction(sphere)
+    clipper.SetInputConnection(skin.GetOutputPort())
+    skin = clipper
+
+    # creating actors
+    bone_actor = create_actor(bone)
+    bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
+
+    skin_actor = create_actor(skin)
+    skin_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
+
+    # creating the sphere actor ----
+    # sampling
+    sample = vtk.vtkSampleFunction()
+    sample.SetImplicitFunction(sphere)
+    sample.SetSampleDimensions(50, 50, 50)
+    sample.SetModelBounds(center[0]- radius, center[0] + radius, 
+        center[1]- radius, center[1] + radius, center[2]- radius, center[2] + radius)
+    # contouring
+    sphere_actor = create_iso_actor(sample, 0)
+    # design
+    sphere_actor.GetProperty().SetColor(0.85, 0.8, 0.1)
+    sphere_actor.GetProperty().SetOpacity(0.15)
+
+    # creating renderer
+    ren = create_renderer([bone_actor, skin_actor, sphere_actor])
     ren.SetBackground(1, 1, 1)
 
     return ren
@@ -149,7 +187,7 @@ def main():
     camera.Roll(-90)
     
     # Creating renderers
-    ren = create_renderer_2(bone, skin)
+    ren = create_renderer_3(bone, skin)
     ren.SetActiveCamera(camera)
     ren.AddActor(outline_actor)
     
