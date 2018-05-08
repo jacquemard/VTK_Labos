@@ -225,7 +225,9 @@ def main():
     
     # Creating renderers
     renderers = [
-        create_renderer_1(bone, skin)]
+        create_renderer_1(bone, skin),
+        create_renderer_2(bone, skin),
+        create_renderer_3(bone, skin)]
     for ren in renderers:
         ren.SetActiveCamera(camera)
         ren.AddActor(outline_actor)
