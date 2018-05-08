@@ -40,6 +40,7 @@ def create_iso_dataset(input, iso_value):
     contour = vtk.vtkContourFilter()
     contour.SetInputConnection(input.GetOutputPort())
     contour.SetValue(0, iso_value)
+    contour.Update()
 
     return contour
 
@@ -72,6 +73,42 @@ def create_bone(image_data):
 def create_skin(image_data):
     return create_iso_dataset(image_data, 50)
 
+
+def create_renderer_1(bone, skin):
+    # creating actors
+    bone_actor = create_actor(bone)
+    bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
+
+    # creating the plane to cut the skin
+    plane = vtk.vtkPlane()
+    center = skin.GetOutput().GetCenter()
+    plane.SetOrigin(center[0], center[1], center[2])
+    plane.SetNormal(0, 0, 1)
+
+    # creating the cutter
+    cutter = vtk.vtkCutter()
+    cutter.SetCutFunction(plane)
+    size = skin.GetOutput().GetBounds()[5]
+    print(size)
+    cutter.GenerateValues(19, -95, +95)
+    cutter.SetInputConnection(skin.GetOutputPort())
+
+    # making it as a tube
+    # using a stripper makes the tube smoother
+    stripper = vtk.vtkStripper()
+    stripper.SetInputConnection(cutter.GetOutputPort())
+    tubeFilter = vtk.vtkTubeFilter()
+    tubeFilter.SetRadius(1)
+    tubeFilter.SetInputConnection(stripper.GetOutputPort())
+
+    cutter_actor = create_actor(tubeFilter)
+    cutter_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
+    
+    # creating renderer
+    ren = create_renderer([bone_actor, cutter_actor])
+    ren.SetBackground(1, 1, 1)
+
+    return ren
 
 def create_renderer_2(bone, skin):
     # creating the sphere clipping
@@ -188,8 +225,7 @@ def main():
     
     # Creating renderers
     renderers = [
-        create_renderer_2(bone, skin),
-        create_renderer_3(bone, skin)]
+        create_renderer_1(bone, skin)]
     for ren in renderers:
         ren.SetActiveCamera(camera)
         ren.AddActor(outline_actor)
