@@ -115,19 +115,27 @@ def main():
     bone, skin = create_2(bone, skin)
     bone, skin = create_actors(bone, skin)     
 
+    # bounding box
+    outline = vtk.vtkOutlineFilter()
+    outline.SetInputConnection(image_data.GetOutputPort())
+    outline_actor = create_actor(outline) 
+    outline_actor.GetProperty().SetColor(0, 0, 0)
+
     # ------------ RENDERING -------------
 
     # Creating a camera
     camera = vtk.vtkCamera()
-    center = image_data.GetOutput().GetCenter()
-    camera.SetPosition(center[0]/2, -450 , center[2]/2)    
+    center = image_data.GetOutput().GetCenter() 
+    camera.SetPosition(center[0] - 0.01, -450 , center[2])
     camera.SetFocalPoint(center)
-    camera.Roll(-37)
+    camera.Roll(-90)
     
     # Creating renderers
     ren = create_renderer([bone, skin])
     ren.SetBackground(1, 1, 1)
     ren.SetActiveCamera(camera)
+    ren.AddActor(outline_actor)
+    
     renderers = [ren]
 
     # Creating viewports
