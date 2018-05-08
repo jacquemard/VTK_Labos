@@ -62,7 +62,7 @@ def create_skin(image_data):
     return create_iso_dataset(image_data, 50)
 
 
-def create_2(bone, skin):
+def create_renderer_2(bone, skin):
     # creating the sphere clipping
     sphere = vtk.vtkSphere()
     sphere.SetRadius(60)
@@ -74,10 +74,23 @@ def create_2(bone, skin):
     clipper.SetInputConnection(skin.GetOutputPort())
     #clipper.SetValue(0)
     #clipper.Update()
-
     skin = clipper
 
-    return (bone, skin)
+    # creating actors
+    bone_actor = create_actor(bone)
+    bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
+
+    skin_actor = create_actor(skin)
+    skin_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
+
+    # front face opacity
+    # skin.GetProperty().FrontFaceCullingOn()
+
+    # creating renderer
+    ren = create_renderer([bone_actor, skin_actor])
+    ren.SetBackground(1, 1, 1)
+
+    return ren
 
 def create_actor(input):
     mapper = vtk.vtkDataSetMapper()
@@ -89,6 +102,7 @@ def create_actor(input):
 
     return actor
 
+'''
 def create_actors(bone, skin):
     bone_actor = create_actor(bone)
     bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
@@ -97,6 +111,7 @@ def create_actors(bone, skin):
     skin_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
 
     return (bone_actor, skin_actor)
+'''
 
 def create_renderer(actors):
     ren = vtk.vtkRenderer()
@@ -112,8 +127,7 @@ def main():
     bone = create_bone(image_data)
     skin = create_skin(image_data) 
 
-    bone, skin = create_2(bone, skin)
-    bone, skin = create_actors(bone, skin)     
+    #bone, skin = create_actors(bone, skin)     
 
     # bounding box
     outline = vtk.vtkOutlineFilter()
@@ -131,8 +145,7 @@ def main():
     camera.Roll(-90)
     
     # Creating renderers
-    ren = create_renderer([bone, skin])
-    ren.SetBackground(1, 1, 1)
+    ren = create_renderer_2(bone, skin)
     ren.SetActiveCamera(camera)
     ren.AddActor(outline_actor)
     
