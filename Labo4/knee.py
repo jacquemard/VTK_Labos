@@ -187,20 +187,24 @@ def main():
     camera.Roll(-90)
     
     # Creating renderers
-    ren = create_renderer_3(bone, skin)
-    ren.SetActiveCamera(camera)
-    ren.AddActor(outline_actor)
-    
-    renderers = [ren]
+    renderers = [
+        create_renderer_2(bone, skin),
+        create_renderer_3(bone, skin)]
+    for ren in renderers:
+        ren.SetActiveCamera(camera)
+        ren.AddActor(outline_actor)
 
     # Creating viewports
     viewports = define_viewports(renderers)
 
     # Creating a window to display the viewports
     renWin = vtk.vtkRenderWindow()
-    renWin.AddRenderer(renderers[0])
-    renWin.SetSize(900, 900)
+    renWin.SetSize(900, 800)
     renWin.Render()
+    
+    # Adding the renderers to the window
+    for ren in renderers:
+        renWin.AddRenderer(ren)
 
     # start the interaction window and add TrackBall Style
     iren = vtk.vtkRenderWindowInteractor()
