@@ -72,8 +72,8 @@ def create_2(bone, skin):
     clipper = vtk.vtkClipDataSet()
     clipper.SetClipFunction(sphere)
     clipper.SetInputConnection(skin.GetOutputPort())
-    clipper.SetValue(0)
-    clipper.Update()
+    #clipper.SetValue(0)
+    #clipper.Update()
 
     skin = clipper
 
@@ -94,11 +94,24 @@ def main():
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
 
+    print(image_data.GetOutput().GetDimensions())
+
     # ------------ RENDERING -------------
+
+    # Creating a camera
+    camera = vtk.vtkCamera()
+    center = image_data.GetOutput().GetCenter()
+    print(image_data.GetOutput().GetExtent())
+    camera.SetPosition(center[0]/2, -450 , center[2]/2)    
+    camera.SetFocalPoint(center)
+    camera.Roll(-37)
+    print(camera.GetRoll())
+
     # Creating renderers
     ren = vtk.vtkRenderer()
     ren.AddActor(actor)
     ren.SetBackground(1, 1, 1)
+    ren.SetActiveCamera(camera)
     renderers = [ren]
 
     # Creating viewports
