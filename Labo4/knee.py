@@ -66,7 +66,7 @@ def create_2(bone, skin):
     # creating the sphere clipping
     sphere = vtk.vtkSphere()
     sphere.SetRadius(60)
-    sphere.SetCenter(0, 100, 100)
+    sphere.SetCenter(70, 30, 100)
 
     # clipping
     clipper = vtk.vtkClipDataSet()
@@ -79,37 +79,53 @@ def create_2(bone, skin):
 
     return (bone, skin)
 
+def create_actor(input):
+    mapper = vtk.vtkDataSetMapper()
+    mapper.SetInputConnection(input.GetOutputPort())
+    mapper.ScalarVisibilityOff()
+    
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+
+    return actor
+
+def create_actors(bone, skin):
+    bone_actor = create_actor(bone)
+    bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
+
+    skin_actor = create_actor(skin)
+    skin_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
+
+    return (bone_actor, skin_actor)
+
+def create_renderer(actors):
+    ren = vtk.vtkRenderer()
+
+    for actor in actors:
+        ren.AddActor(actor)
+
+    return ren
+
 def main():
     image_data = load_image_data()
 
     bone = create_bone(image_data)
     skin = create_skin(image_data) 
 
-    val = create_2(bone, skin)
-        
-    mapper = vtk.vtkDataSetMapper()
-    mapper.SetInputConnection(val[1].GetOutputPort())
-    mapper.ScalarVisibilityOff()
-    
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
-    print(image_data.GetOutput().GetDimensions())
+    bone, skin = create_2(bone, skin)
+    bone, skin = create_actors(bone, skin)     
 
     # ------------ RENDERING -------------
 
     # Creating a camera
     camera = vtk.vtkCamera()
     center = image_data.GetOutput().GetCenter()
-    print(image_data.GetOutput().GetExtent())
     camera.SetPosition(center[0]/2, -450 , center[2]/2)    
     camera.SetFocalPoint(center)
     camera.Roll(-37)
-    print(camera.GetRoll())
-
+    
     # Creating renderers
-    ren = vtk.vtkRenderer()
-    ren.AddActor(actor)
+    ren = create_renderer([bone, skin])
     ren.SetBackground(1, 1, 1)
     ren.SetActiveCamera(camera)
     renderers = [ren]
@@ -119,7 +135,7 @@ def main():
 
     # Creating a window to display the viewports
     renWin = vtk.vtkRenderWindow()
-    renWin.AddRenderer(ren)
+    renWin.AddRenderer(renderers[0])
     renWin.SetSize(900, 900)
     renWin.Render()
 
