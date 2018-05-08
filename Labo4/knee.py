@@ -47,13 +47,24 @@ def create_iso_actor(input, iso_value):
     contour = create_iso_dataset(input, iso_value)
     return create_actor(contour)
 
+'''
 def create_mapper(input):
     mapper = vtk.vtkDataSetMapper()
     mapper.SetInputConnection(skin.GetOutputPort())
     mapper.ScalarVisibilityOff()
 
     return mapper
+'''
 
+def create_actor(input):
+    mapper = vtk.vtkDataSetMapper()
+    mapper.SetInputConnection(input.GetOutputPort())
+    mapper.ScalarVisibilityOff()
+    
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+
+    return actor
 
 def create_bone(image_data):
     return create_iso_dataset(image_data, 73)
@@ -80,27 +91,20 @@ def create_renderer_2(bone, skin):
     bone_actor = create_actor(bone)
     bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
 
-    skin_actor = create_actor(skin)
-    skin_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
-
-    # front face opacity
-    # skin.GetProperty().FrontFaceCullingOn()
+    # spliting the skin in 2 different actors for front face opacity
+    frontface_actor = create_actor(skin)
+    frontface_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
+    backface_actor = create_actor(skin)
+    backface_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
+    backface_actor.GetProperty().FrontfaceCullingOn()
+    # changing opacity of the front one
+    frontface_actor.GetProperty().SetOpacity(0.6)
 
     # creating renderer
-    ren = create_renderer([bone_actor, skin_actor])
+    ren = create_renderer([bone_actor, frontface_actor, backface_actor])
     ren.SetBackground(1, 1, 1)
 
     return ren
-
-def create_actor(input):
-    mapper = vtk.vtkDataSetMapper()
-    mapper.SetInputConnection(input.GetOutputPort())
-    mapper.ScalarVisibilityOff()
-    
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-
-    return actor
 
 '''
 def create_actors(bone, skin):
