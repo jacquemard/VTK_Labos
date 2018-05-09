@@ -12,7 +12,7 @@ import math
 low_res = True
 
 # false if we want to open distance data from file, true if we want to write the file
-write_file = False
+write_file = True
 
 def load_image_data():
     # Loading image data from file
@@ -228,6 +228,10 @@ def create_renderer_4(bone, skin):
     mapper.SetScalarRange(
         distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[0],
         distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[1])
+    # inversing colors
+    table = mapper.GetLookupTable()
+    table.SetHueRange(2/3, 0)
+    table.Build()
     
     bone_actor = vtk.vtkActor()
     bone_actor.SetMapper(mapper)
