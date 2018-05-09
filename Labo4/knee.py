@@ -66,14 +66,6 @@ def create_iso_actor(input, iso_value):
     contour = create_iso_dataset(input, iso_value)
     return create_actor(contour)
 
-'''
-def create_mapper(input):
-    mapper = vtk.vtkDataSetMapper()
-    mapper.SetInputConnection(skin.GetOutputPort())
-    mapper.ScalarVisibilityOff()
-
-    return mapper
-'''
 
 def create_actor(input):
     mapper = vtk.vtkDataSetMapper()
@@ -125,7 +117,7 @@ def create_renderer_1(bone, skin, spacing):
     
     # creating renderer
     ren = create_renderer([bone_actor, cutter_actor])
-    ren.SetBackground(1, 1, 1)
+    ren.SetBackground(1, 0.827, 0.824)
 
     return ren
 
@@ -156,7 +148,7 @@ def create_renderer_2(bone, skin):
 
     # creating renderer
     ren = create_renderer([bone_actor, frontface_actor, backface_actor])
-    ren.SetBackground(1, 1, 1)
+    ren.SetBackground(0.824, 1, 0.824)
 
     return ren
 
@@ -196,7 +188,7 @@ def create_renderer_3(bone, skin):
 
     # creating renderer
     ren = create_renderer([bone_actor, skin_actor, sphere_actor])
-    ren.SetBackground(1, 1, 1)
+    ren.SetBackground(0.827, 0.824, 1)
 
     return ren
 
@@ -238,20 +230,9 @@ def create_renderer_4(bone, skin):
     
     # creating renderer
     ren = create_renderer([bone_actor])
-    ren.SetBackground(1, 1, 1)
+    ren.SetBackground(0.824, 0.827, 0.824)
 
     return ren
-
-'''
-def create_actors(bone, skin):
-    bone_actor = create_actor(bone)
-    bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
-
-    skin_actor = create_actor(skin)
-    skin_actor.GetProperty().SetColor(0.8, 0.62, 0.62)
-
-    return (bone_actor, skin_actor)
-'''
 
 def create_renderer(actors):
     ren = vtk.vtkRenderer()
@@ -265,9 +246,7 @@ def main():
     image_data, spacing = load_image_data()
 
     bone = create_bone(image_data)
-    skin = create_skin(image_data) 
-
-    #bone, skin = create_actors(bone, skin)     
+    skin = create_skin(image_data)     
 
     # bounding box
     outline = vtk.vtkOutlineFilter()
