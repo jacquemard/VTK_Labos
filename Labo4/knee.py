@@ -8,11 +8,26 @@
 import vtk
 import math
 
+# true if we want a low image resolution, false otherwise
+low_res = True
+
+# false if we want to open distance data from file, true if we want to write the file
+write_file = False
+
 def load_image_data():
     # Loading image data from file
     reader = vtk.vtkSLCReader()
     reader.SetFileName('vw_knee.slc')
     reader.Update()
+
+    # resampling if we want to
+    if low_res:
+        resample = vtk.vtkImageResample()
+        resample.SetMagnificationFactors(0.2, 0.2, 0.2)
+        resample.SetInputConnection(reader.GetOutputPort())
+        resample.Update()
+        reader = resample
+
     return reader
 
 
@@ -82,15 +97,16 @@ def create_renderer_1(bone, skin):
     # creating the plane to cut the skin
     plane = vtk.vtkPlane()
     center = skin.GetOutput().GetCenter()
-    plane.SetOrigin(center[0], center[1], center[2])
+    # origin is set to the center
+    plane.SetOrigin(center[0], center[1], center[2]) 
     plane.SetNormal(0, 0, 1)
 
     # creating the cutter
     cutter = vtk.vtkCutter()
     cutter.SetCutFunction(plane)
     size = skin.GetOutput().GetBounds()[5]
-    print(size)
-    cutter.GenerateValues(19, -95, +95)
+    # 19 tube, 1 centered, 9 for each side. 1 centimeter is 10 voxel height
+    cutter.GenerateValues(19, -90, +90) 
     cutter.SetInputConnection(skin.GetOutputPort())
 
     # making it as a tube
@@ -181,6 +197,50 @@ def create_renderer_3(bone, skin):
 
     return ren
 
+def create_renderer_4(bone, skin):
+    distanceFilter = None
+    # writing to the file or open from file
+    if write_file:
+         # computing the distance between the bone and the skin
+        distanceFilter = vtk.vtkDistancePolyDataFilter()
+        distanceFilter.SetInputConnection(0, bone.GetOutputPort())
+        distanceFilter.SetInputConnection(1, skin.GetOutputPort())
+        distanceFilter.Update()
+
+        # writing data
+        print("Writing")
+        writer = vtk.vtkPolyDataWriter()
+        writer.SetInputConnection(distanceFilter.GetOutputPort())
+        writer.SetFileName('bone_distances.vtk')
+        writer.Update()
+        print("Written")
+    else:
+        reader = vtk.vtkPolyDataReader()
+        reader.SetFileName('bone_distances.vtk')
+        reader.Update()
+
+        distanceFilter = reader
+    
+
+    # creating bone actor
+    mapper = vtk.vtkDataSetMapper()
+    mapper.SetInputConnection(distanceFilter.GetOutputPort())
+    mapper.SetScalarRange(
+        distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[0],
+        distanceFilter.GetOutput().GetPointData().GetScalars().GetRange()[1])
+    
+    bone_actor = vtk.vtkActor()
+    bone_actor.SetMapper(mapper)
+
+    #bone_actor = create_actor(distanceFilter)
+    # bone_actor.GetProperty().SetColor(0.94, 0.94, 0.94)
+    
+    # creating renderer
+    ren = create_renderer([bone_actor])
+    ren.SetBackground(1, 1, 1)
+
+    return ren
+
 '''
 def create_actors(bone, skin):
     bone_actor = create_actor(bone)
@@ -225,9 +285,7 @@ def main():
     
     # Creating renderers
     renderers = [
-        create_renderer_1(bone, skin),
-        create_renderer_2(bone, skin),
-        create_renderer_3(bone, skin)]
+        create_renderer_4(bone, skin)]
     for ren in renderers:
         ren.SetActiveCamera(camera)
         ren.AddActor(outline_actor)
