@@ -327,14 +327,26 @@ if __name__ == '__main__':
     renderer = vtk.vtkRenderer()
     renderer.AddActor(actor)
     '''
+    map_actor = load_map()
+    plane_actor = load_plane()
     
     renderer = vtk.vtkRenderer()
-    print("Loading map")
-    renderer.AddActor(load_map())
-    print("Loading plane")
-    #renderer.AddActor(load_plane()) # adds the plane actor
-    print("Done")
+    renderer.AddActor(map_actor)
+    renderer.AddActor(plane_actor) # adds the plane actor
     renderer.SetBackground(0.1, 0.2, 0.4)
+
+    # Moving the camera
+    camera = vtk.vtkCamera()
+    distance = 50000 # the camera will be at ~50000m above the surface
+    center_lat = BOTTOM_LEFT_COORDINATES[0] + (TOP_RIGHT_COORDINATES[0] - BOTTOM_LEFT_COORDINATES[0]) / 2
+    center_lon = BOTTOM_LEFT_COORDINATES[1] + (TOP_RIGHT_COORDINATES[1] - BOTTOM_LEFT_COORDINATES[1]) / 2
+    center = gps_to_world(center_lat, center_lon)
+    center_high = gps_to_world(center_lat, center_lon, distance)
+    camera.SetPosition(center_high)
+    camera.SetFocalPoint(center) # looking at the center of the map
+    camera.SetRoll(282)
+    camera.SetClippingRange(1, 100000000)
+    renderer.SetActiveCamera(camera)
 
     # Creating a window to display the viewports
     renWin = vtk.vtkRenderWindow()
