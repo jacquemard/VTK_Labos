@@ -66,6 +66,7 @@ TOP_RIGHT_COORDINATES = rt90_to_gps(1371573, 7022967)
 BOTTOM_RIGHT_COORDINATES = rt90_to_gps(1371835, 7006362)
 BOTTOM_LEFT_COORDINATES = rt90_to_gps(1349602, 7005969)
 
+print("{},{},{},{}".format(TOP_LEFT_COORDINATES, TOP_RIGHT_COORDINATES, BOTTOM_LEFT_COORDINATES, BOTTOM_RIGHT_COORDINATES))
 
 def load_plane():
     file = open(PATH_PLANE_GPS, 'r')
@@ -140,23 +141,25 @@ def load_map():
     map_values = np.fromfile(PATH_MAP, dtype=np.int16).reshape(GRID_WIDTH, GRID_WIDTH)
 
     # Select only the desired area  TO DO CHECK THIS PART !!!
-    top_bound = max(TOP_LEFT_COORDINATES[0], TOP_RIGHT_COORDINATES[0])
-    bottom_bound = min(BOTTOM_RIGHT_COORDINATES[0], BOTTOM_LEFT_COORDINATES[0])
-    left_bound = min(TOP_LEFT_COORDINATES[1], BOTTOM_LEFT_COORDINATES[1])
-    right_bound = max(TOP_RIGHT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1])
+    north_bound = max(TOP_LEFT_COORDINATES[0], TOP_RIGHT_COORDINATES[0])
+    south_bound = min(BOTTOM_RIGHT_COORDINATES[0], BOTTOM_LEFT_COORDINATES[0])
+    west_bound = min(TOP_LEFT_COORDINATES[1], BOTTOM_LEFT_COORDINATES[1])
+    east_bound = max(TOP_RIGHT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1])
 
-    top_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_LAT_LON - top_bound) * (1/DELTA_LAT_LON)))
-    bottom_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_LAT_LON - bottom_bound) * (1/DELTA_LAT_LON)))
-    left_index = int(math.floor((left_bound - MIN_ELEVATION_LON) * (1/DELTA_LAT_LON)))
-    right_index = int(math.floor((right_bound - MIN_ELEVATION_LON) * (1/DELTA_LAT_LON)))
+    # POURQUOI CA CA MARCHE TODOOOOO +90"(73928719782301987209837)
+    north_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_LAT_LON - south_bound) / DELTA_LAT_LON))
+    south_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_LAT_LON - north_bound) / DELTA_LAT_LON))
+    west_index = int(math.floor((west_bound - MIN_ELEVATION_LON) / DELTA_LAT_LON))
+    east_index = int(math.floor((east_bound - MIN_ELEVATION_LON) / DELTA_LAT_LON))
 
-    x_size = right_index - left_index + 1
-    y_size = bottom_index - top_index + 1
+    x_size = east_index - west_index + 1
+    y_size = north_index - south_index + 1
 
-    #print("{}, {}, {}, {}".format(top_bound, bottom_bound, left_bound, right_bound))
-    #print("{}, {}, {}, {}".format(top_index, bottom_index, left_index, right_index))
-
-    map_values = map_values[top_index:bottom_index + 1, left_index:right_index + 1]
+    print("{}, {}, {}, {}".format(north_bound, south_bound, west_bound, east_bound))
+    print("{}, {}, {}, {}".format(north_index, south_index, west_index, east_index))
+ 
+    map_values = map_values[south_index:north_index + 1, west_index:east_index + 1]
+   # map_values = map_values[north_index:south_index + 1, west_index:east_index + 1]
     
     # Defining geometry
     points = vtk.vtkPoints()
@@ -169,9 +172,10 @@ def load_map():
     # exploring the values
     for i, row in enumerate(map_values):
         for j, alt in enumerate(row):
-            lat = top_bound - i * DELTA_LAT_LON
-            lon = left_bound + j * DELTA_LAT_LON
+            lat = south_bound + i * DELTA_LAT_LON
+            lon = west_bound + j * DELTA_LAT_LON
 
+            #print("{},{}".format(lat, lon))
             # converting to world coordinates
             x, y, z = gps_to_world(lat, lon, alt)
             #print("{},{},{}".format(x, y, z))
@@ -179,7 +183,7 @@ def load_map():
             points.InsertNextPoint(x, y, z)
 
             # Adding the texture coordinates
-            texture_coords.InsertNextTuple((j / x_size, i / y_size))
+            texture_coords.InsertNextTuple(((j / x_size), 1 - (i / y_size)))
 
 
     # creating a dataset
