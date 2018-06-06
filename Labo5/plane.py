@@ -20,9 +20,11 @@ PATH_PLANE_GPS = "vtkgps.txt"
 RT90_PROJECTION = pyproj.Proj(init='epsg:3021')
 GPS_PROJECTION = pyproj.Proj(init='epsg:4326')
 
-MIN_ELEVATION_LAT = 60
-MIN_ELEVATION_LON = 10
+MIN_LAT = 60
+MIN_LON = 10
 COVERED_DEG = 5
+MAX_LAT = MIN_LAT + COVERED_DEG
+MAX_LON = MIN_LON + COVERED_DEG
 GRID_WIDTH = 6000
 DELTA_DEG = COVERED_DEG / GRID_WIDTH
 
@@ -30,6 +32,7 @@ DELTA_DEG = COVERED_DEG / GRID_WIDTH
 
 def rt90_to_gps(x, y):
     lon, lat =  pyproj.transform(RT90_PROJECTION, GPS_PROJECTION, x, y)
+    #print("{},{}".format(lat, lon))
     return (lat, lon)
 
 # Defining constants relating to the map
@@ -44,7 +47,7 @@ def gps_to_world(lat, lon, alt = 0):
 
     # Rotating the point from latitude and longitude
     t.RotateY(lat)
-    t.RotateZ(lon)
+    t.RotateZ(-lon)
 
     # Describing the point and setting it on the x axe, at the right altitude.
     p_in = [RADIUS + alt, 0, 0]
@@ -54,7 +57,6 @@ def gps_to_world(lat, lon, alt = 0):
     return p_out
 
 def rt90_to_world(x, y, alt = 0):
-    # We could have used RT90_PROJECTION(x, y), which give directly x, y, z world coordinates
     lat, lon = rt90_to_gps(x, y)
     # print("{},{}".format(lat, lon))
     p = gps_to_world(lat, lon, alt) 
@@ -146,10 +148,10 @@ def load_map():
     west_bound = min(TOP_LEFT_COORDINATES[1], BOTTOM_LEFT_COORDINATES[1])
     east_bound = max(TOP_RIGHT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1])
 
-    north_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_DEG - north_bound) / DELTA_DEG))
-    south_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_DEG - south_bound) / DELTA_DEG))
-    west_index = int(math.floor((west_bound - MIN_ELEVATION_LON) / DELTA_DEG))
-    east_index = int(math.floor((east_bound - MIN_ELEVATION_LON) / DELTA_DEG))
+    north_index = int(math.floor((MAX_LAT - north_bound) / DELTA_DEG))
+    south_index = int(math.floor((MAX_LAT - south_bound) / DELTA_DEG))
+    west_index = int(math.floor((west_bound - MIN_LON) / DELTA_DEG))
+    east_index = int(math.floor((east_bound - MIN_LON) / DELTA_DEG))
 
     x_size = east_index - west_index + 1
     y_size = south_index - north_index + 1
@@ -328,11 +330,12 @@ if __name__ == '__main__':
     renderer = vtk.vtkRenderer()
     renderer.AddActor(actor)
     '''
-    map_actor = load_map()
-    plane_actor = load_plane()
-    
     renderer = vtk.vtkRenderer()
+
+    map_actor = load_map()
     renderer.AddActor(map_actor)
+
+    plane_actor = load_plane()
     renderer.AddActor(plane_actor) # adds the plane actor
     renderer.SetBackground(0.1, 0.2, 0.4)
 
@@ -345,7 +348,7 @@ if __name__ == '__main__':
     center_high = gps_to_world(center_lat, center_lon, distance)
     camera.SetPosition(center_high)
     camera.SetFocalPoint(center) # looking at the center of the map
-    camera.SetRoll(282)
+    camera.SetRoll(78.7)
     camera.SetClippingRange(1, 100000000)
     renderer.SetActiveCamera(camera)
 
