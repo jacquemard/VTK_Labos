@@ -1,6 +1,6 @@
 #############################################
 # HEIG-VD - VTK - Labo 5
-# Scanner d'un genou
+# Plane Mapper
 # Rémi Jacquemard & Francois Quellec
 # Mai-Juin 2018
 #############################################
@@ -20,6 +20,7 @@ PATH_PLANE_GPS = "vtkgps.txt"
 RT90_PROJECTION = pyproj.Proj(init='epsg:3021')
 GPS_PROJECTION = pyproj.Proj(init='epsg:4326')
 
+# Defining constants relating to the map
 MIN_LAT = 60
 MIN_LON = 10
 COVERED_DEG = 5
@@ -27,16 +28,14 @@ MAX_LAT = MIN_LAT + COVERED_DEG
 MAX_LON = MIN_LON + COVERED_DEG
 GRID_WIDTH = 6000
 DELTA_DEG = COVERED_DEG / GRID_WIDTH
+EARTH_RADIUS = 6371009
 
-#RATIO_DEG_METERS = 6000 / 5. # meter/degrees ratio (6000 points for 5 degrees)
 
+
+# Coordinates handler functions
 def rt90_to_gps(x, y):
     lon, lat =  pyproj.transform(RT90_PROJECTION, GPS_PROJECTION, x, y)
-    #print("{},{}".format(lat, lon))
     return (lat, lon)
-
-# Defining constants relating to the map
-RADIUS = 6371009 # Earth radius
 
 def gps_to_world(lat, lon, alt = 0):
     """
@@ -50,7 +49,7 @@ def gps_to_world(lat, lon, alt = 0):
     t.RotateZ(-lon)
 
     # Describing the point and setting it on the x axe, at the right altitude.
-    p_in = [RADIUS + alt, 0, 0]
+    p_in = [EARTH_RADIUS + alt, 0, 0]
     p_out = [0, 0, 0]
     t.TransformPoint(p_in, p_out)
 
@@ -58,9 +57,7 @@ def gps_to_world(lat, lon, alt = 0):
 
 def rt90_to_world(x, y, alt = 0):
     lat, lon = rt90_to_gps(x, y)
-    # print("{},{}".format(lat, lon))
     p = gps_to_world(lat, lon, alt) 
-    # print(p)
     return p
 
 TOP_LEFT_COORDINATES = rt90_to_gps(1349340, 7022573)
@@ -68,78 +65,71 @@ TOP_RIGHT_COORDINATES = rt90_to_gps(1371573, 7022967)
 BOTTOM_RIGHT_COORDINATES = rt90_to_gps(1371835, 7006362)
 BOTTOM_LEFT_COORDINATES = rt90_to_gps(1349602, 7005969)
 
-print("{},{},{},{}".format(TOP_LEFT_COORDINATES, TOP_RIGHT_COORDINATES, BOTTOM_LEFT_COORDINATES, BOTTOM_RIGHT_COORDINATES))
 
 def load_plane():
     file = open(PATH_PLANE_GPS, 'r')
-    nbLines = int(file.readline())
     coords = []
 
     # Reading the plane file line by line (position by position)
-    for line in range(0, nbLines):
+    for line in range(0, int(file.readline())):
         # parsing plane position data
-        (_, x, y, z, date, time, _, _, _, _) = file.readline().split()
-        x = int(x)
-        y = int(y)
-        z = float(z)
-        #print("{},{}".format(x, y))
+        values = file.readline().split()
+        x = int(values[1])
+        y = int(values[2])
+        z = float(values[3])
         
-        date = datetime.strptime(date + ' ' + time, '%y/%d/%m %H:%M:%S')
-        ##x, y = convert_to_world(x, y)
-        coords.append((x, y, z, date))
+        coords.append((x, y, z))
 
     points = vtk.vtkPoints()
-    scalars = vtk.vtkFloatArray()
-    line = vtk.vtkPolyLine()
-    cells = vtk.vtkCellArray()
-    polydata = vtk.vtkPolyData()
+    gradients = vtk.vtkFloatArray()
+    lines = vtk.vtkPolyLine()
+    lines.GetPointIds().SetNumberOfIds(len(coords))
 
-    line.GetPointIds().SetNumberOfIds(len(coords))
-
-    prev_height = 512.5 # min height of the map
+    last_alt = coords[0][2] # Take the starting altitude
 
     # Tracking the max gradients of the plane to have a nice color range for the lookup table
-    min_scalar, max_scalar = 0, 0
+    min_gradient, max_gradient = 0, 0
 
-    for i, (x, y, z, _) in enumerate(coords): 
-        plane_coords = rt90_to_world(x, y, z)
-        #plane_coords = ((x - TOP_LEFT_COORDINATES[0]) * RATIO_DEG_METERS * width_meters, (y - TOP_RIGHT_COORDINATES[1]) * RATIO_DEG_METERS * height_meters, z)
+    for i, (x, y, alt) in enumerate(coords): 
+        plane_coords = rt90_to_world(x, y, alt)
         points.InsertNextPoint(plane_coords)
-        line.GetPointIds().SetId(i, i)
+        lines.GetPointIds().SetId(i, i)
 
         # positive or negative value, when the plane go up, respectively go down
-        delta_height = prev_height - z
+        delta_alt = last_alt - alt
+        gradients.InsertNextValue(delta_alt)
 
-        scalars.InsertNextValue(delta_height)
+        min_gradient = last_alt-alt if (min_gradient > last_alt-alt) else min_gradient
+        max_gradient = last_alt-alt if (max_gradient < last_alt-alt) else max_gradient
+        last_alt = alt
 
-        if min_scalar > prev_height-z:
-            min_scalar = prev_height-z
-        if max_scalar < prev_height-z:
-            max_scalar = prev_height-z
-        prev_height = z
+    # Create a cell array to store the lines in and add the lines to it
+    cells = vtk.vtkCellArray()
+    cells.InsertNextCell(lines)
 
-    cells.InsertNextCell(line)
+    # Create the associated polydata
+    polydata = vtk.vtkPolyData()
     polydata.SetPoints(points)
     polydata.SetLines(cells)
-    polydata.GetPointData().SetScalars(scalars)
+    polydata.GetPointData().SetScalars(gradients)
 
+    # Create the trajectory tube
     tube = vtk.vtkTubeFilter()
-    tube.SetRadius(30)
-    tube.SetNumberOfSides(50)
+    tube.SetRadius(25)
+    tube.SetNumberOfSides(45)
     tube.SetInputData(polydata)
 
+    # Finally create the mapper and add it ton an actor
     mapper = vtk.vtkPolyDataMapper()
     mapper.SetInputConnection(tube.GetOutputPort())
-    mapper.SetScalarRange(min_scalar / 2, max_scalar / 3)
+    mapper.SetScalarRange(min_gradient/4, max_gradient/4)
 
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
-    mapper.Update()
 
     return actor
 
-
-
+# Initiate the constantes for the interpolation
 px = [BOTTOM_LEFT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1], TOP_RIGHT_COORDINATES[1], TOP_LEFT_COORDINATES[1]]
 py = [BOTTOM_LEFT_COORDINATES[0], BOTTOM_RIGHT_COORDINATES[0], TOP_RIGHT_COORDINATES[0], TOP_LEFT_COORDINATES[0]]
 
@@ -152,7 +142,8 @@ coeff = np.array([
 coeff_inv = np.linalg.inv(coeff)
 a = np.dot(coeff_inv,px)
 b = np.dot(coeff_inv,py)
-print("a: {}".format(a))
+
+# Interpolation of the texture, formula from : https://www.particleincell.com/2012/quad-interpolation/
 def find_texture_coordinates(lat, lon):
     #quadratic equation coeffs, aa*mm^2+bb*m+cc=0
     aa = a[3]*b[2] - a[2]*b[3];
@@ -166,12 +157,7 @@ def find_texture_coordinates(lat, lon):
     #compute l
     l = (lon-a[0]-a[2]*m)/(a[1]+a[3]*m);
 
-    #print("lat", lat, "lon", lon)
-    #print("m:", m, "l:", l)
     return l, m
-
-    #return(x, y)
-
 
 def load_map():
     # Load the map
@@ -188,17 +174,8 @@ def load_map():
     west_index = int(math.floor((west_bound - MIN_LON) / DELTA_DEG))
     east_index = int(math.floor((east_bound - MIN_LON) / DELTA_DEG))
 
-    x_size = east_index - west_index + 1
-    y_size = south_index - north_index + 1
-
-    print("{}, {}, {}, {}".format(north_bound, south_bound, west_bound, east_bound))
-    print("{}, {}, {}, {}".format(north_index, south_index, west_index, east_index))
- 
-    #map_values = map_values[south_index:north_index + 1, west_index:east_index + 1]
     map_values = map_values[north_index:south_index + 1, west_index:east_index + 1]
     
-    print("{},{},{},{}".format(map_values[0][0], map_values[0][-1], map_values[-1][0], map_values[-1][-1]))
-
     # Defining geometry
     points = vtk.vtkPoints()
 
@@ -213,10 +190,9 @@ def load_map():
             lat = north_bound - i * DELTA_DEG
             lon = west_bound + j * DELTA_DEG
 
-            #print("{},{}".format(lat, lon))
             # converting to world coordinates
             x, y, z = gps_to_world(lat, lon, alt)
-            #print("{},{},{}".format(x, y, z))
+
             # Adding the point
             points.InsertNextPoint(x, y, z)
 
@@ -228,7 +204,7 @@ def load_map():
     # creating a dataset
     # vtkStructuredGrid has an implicit topology and take less memory than a polydata
     grid = vtk.vtkStructuredGrid()
-    grid.SetDimensions(x_size, y_size, 1)
+    grid.SetDimensions(east_index - west_index + 1, south_index - north_index + 1, 1)
     grid.SetPoints(points)
     grid.GetPointData().SetTCoords(texture_coords)
 
@@ -244,128 +220,17 @@ def load_map():
 
     return actor
 
-    
-    '''
-    
 
-    # build the map polydata from our file
-    map = vtk.vtkPolyData()
-    height, width = file.shape
-    print(file.shape)
-    
-    height_meters = 16700. / height # 16700 = distance between top left and bottom left GPS points in meters
-    width_meters = 22000. / width # 22000 = distance between top left and top right GPS points in meters
-
-    index_deg_ratio_x = width / (right_bound - left_bound) # matrix index/degrees ratio for x values
-    index_deg_ratio_y = height / (top_bound - bottom_bound) # matrix index/degrees ratio for y values
-
-    # Matrix indexes of four corners
-    top_left_index = (int(math.floor((TOP_LEFT_COORDINATES[0] - left_index) * index_deg_ratio_x)), int(math.floor((top_index - TOP_LEFT_COORDINATES[1]) * index_deg_ratio_y)))
-    top_right_index = (int(math.floor((TOP_RIGHT_COORDINATES[0] - left_index) * index_deg_ratio_x)), int(math.floor((top_index - TOP_RIGHT_COORDINATES[1]) * index_deg_ratio_y)))
-    bot_right_index = (int(math.floor((BOTTOM_RIGHT_COORDINATES[0] - left_index) * index_deg_ratio_x)), int(math.floor((top_index - BOTTOM_RIGHT_COORDINATES[1]) * index_deg_ratio_y)))
-    bot_left_index = (int(math.floor((BOTTOM_LEFT_COORDINATES[0] - left_index) * index_deg_ratio_x)), int(math.floor((top_index - BOTTOM_LEFT_COORDINATES[1]) * index_deg_ratio_y)))
-
-    theta = math.atan((bot_right_index[1]) / float((width - bot_left_index[0]))) # texture angle difference
-
-    gradient_1 = float(top_left_index[0] - bot_left_index[0]) / (top_left_index[1] - bot_left_index[1]) # the gradient of the texture's width line to the x axis
-    gradient_2 = (top_left_index[1] - top_right_index[1]) / float(top_left_index[0] - top_right_index[0]) # the gradient of the texture's height line to the y axis
-
-    text_width = (width - bot_left_index[0]) / math.cos(theta)
-    text_height = (height - top_left_index[1]) / math.cos(theta)
-    
-    def getPointIndex(i, j):
-        return width * i + j
-
-    # Draw the points of the map
-    points = vtk.vtkPoints()
-    mapping_array = vtk.vtkFloatArray()
-    mapping_array.SetNumberOfComponents(2)
-    
-    for y, row in enumerate(file):
-        for x, z in enumerate(row):
-            coord_x = float(width_meters * x) # transform y in meters
-            coord_y = float(height_meters * y) # transform x in meters
-            points.InsertNextPoint((coord_x, -coord_y, z))
-
-            text_x = (x - (gradient_1 * y)) / math.cos(theta) - top_left_index[0] # calculates the x2 value (on texture map)
-            text_y = (y - (gradient_2 * x)) / math.cos(theta) - top_left_index[1] # calculates the y2 value (on texture map)
-
-            if text_x <= 0 or text_y <= 0 or text_x >= text_width or text_y >= text_height: # Outside the texture
-                mapping_array.InsertNextTuple((0, 0))
-            else:
-                # weights x2 and y2 to be in the range [0, 1]
-                x2 = text_x / text_width
-                y2 = text_y / text_height
-                mapping_array.InsertNextTuple((text_x / text_width, 1 - (text_y / (text_height))))
-    
-
-
-    map.SetPoints(points)
-    map.GetPointData().SetTCoords(mapping_array) # set texture coords
-
-    # draws the map using triangle strips
-    strip = vtk.vtkCellArray()
-    for y in range(0, height - 1):
-        strip.InsertNextCell((width - 1) * 2)
-        for x in range(0, width - 1):
-            strip.InsertCellPoint(getPointIndex(y + 1, x))
-            strip.InsertCellPoint(getPointIndex(y, x))
-    map.SetStrips(strip)
-
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputData(map)
-
-    return mapper
-    '''
-
+# Load the image texture
 def load_texture():
     image_reader = vtk.vtkJPEGReader()
-    image_reader.SetFileName(PATH_IMG) # import the texture image
-
+    image_reader.SetFileName(PATH_IMG)
     texture = vtk.vtkTexture()
-    texture.SetInputConnection(image_reader.GetOutputPort()) # sets the image for the texture
-    texture.InterpolateOff()
-    texture.RepeatOff()
+    texture.SetInputConnection(image_reader.GetOutputPort())
     return texture
 
 
 if __name__ == '__main__':
-    '''
-    actor = vtk.vtkActor()
-    actor.SetMapper(load_map())
-    actor.SetTexture(load_texture())
-    '''
-    '''
-    points = vtk.vtkPoints()
-    points.InsertNextPoint(0, 0, 0)
-    points.InsertNextPoint(0, 1, 0)
-    points.InsertNextPoint(1, 0, 0)
-    points.InsertNextPoint(1, 1, 0)
-
-
-    mapping_array = vtk.vtkFloatArray()
-    mapping_array.SetNumberOfComponents(2)
-    mapping_array.InsertNextTuple((0, 0))
-    mapping_array.InsertNextTuple((0, 1))
-    mapping_array.InsertNextTuple((1, 0))
-    mapping_array.InsertNextTuple((1, 1))
-
-    grid = vtk.vtkStructuredGrid()
-    grid.SetDimensions(2, 2, 1)
-    grid.SetPoints(points)
-    grid.GetPointData().SetTCoords(mapping_array)
-
-    mapper = vtk.vtkDataSetMapper()
-    mapper.SetInputData(grid)
-
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-    actor.SetTexture(load_texture())
-        
-
-    renderer = vtk.vtkRenderer()
-    renderer.AddActor(actor)
-    '''
     renderer = vtk.vtkRenderer()
 
     map_actor = load_map()
@@ -373,7 +238,7 @@ if __name__ == '__main__':
 
     plane_actor = load_plane()
     renderer.AddActor(plane_actor) # adds the plane actor
-    renderer.SetBackground(0.1, 0.2, 0.4)
+    renderer.SetBackground(0.2, 0.2, 0.4)
 
     # Moving the camera
     camera = vtk.vtkCamera()
