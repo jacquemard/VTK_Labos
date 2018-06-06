@@ -22,9 +22,9 @@ GPS_PROJECTION = pyproj.Proj(init='epsg:4326')
 
 MIN_ELEVATION_LAT = 60
 MIN_ELEVATION_LON = 10
-COVERED_LAT_LON = 5
+COVERED_DEG = 5
 GRID_WIDTH = 6000
-DELTA_LAT_LON = COVERED_LAT_LON / GRID_WIDTH
+DELTA_DEG = COVERED_DEG / GRID_WIDTH
 
 #RATIO_DEG_METERS = 6000 / 5. # meter/degrees ratio (6000 points for 5 degrees)
 
@@ -140,27 +140,28 @@ def load_map():
     # Load the map
     map_values = np.fromfile(PATH_MAP, dtype=np.int16).reshape(GRID_WIDTH, GRID_WIDTH)
 
-    # Select only the desired area  TO DO CHECK THIS PART !!!
+    # Select only the desired area
     north_bound = max(TOP_LEFT_COORDINATES[0], TOP_RIGHT_COORDINATES[0])
     south_bound = min(BOTTOM_RIGHT_COORDINATES[0], BOTTOM_LEFT_COORDINATES[0])
     west_bound = min(TOP_LEFT_COORDINATES[1], BOTTOM_LEFT_COORDINATES[1])
     east_bound = max(TOP_RIGHT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1])
 
-    # POURQUOI CA CA MARCHE TODOOOOO +90"(73928719782301987209837)
-    north_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_LAT_LON - south_bound) / DELTA_LAT_LON))
-    south_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_LAT_LON - north_bound) / DELTA_LAT_LON))
-    west_index = int(math.floor((west_bound - MIN_ELEVATION_LON) / DELTA_LAT_LON))
-    east_index = int(math.floor((east_bound - MIN_ELEVATION_LON) / DELTA_LAT_LON))
+    north_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_DEG - north_bound) / DELTA_DEG))
+    south_index = int(math.floor((MIN_ELEVATION_LAT + COVERED_DEG - south_bound) / DELTA_DEG))
+    west_index = int(math.floor((west_bound - MIN_ELEVATION_LON) / DELTA_DEG))
+    east_index = int(math.floor((east_bound - MIN_ELEVATION_LON) / DELTA_DEG))
 
     x_size = east_index - west_index + 1
-    y_size = north_index - south_index + 1
+    y_size = south_index - north_index + 1
 
     print("{}, {}, {}, {}".format(north_bound, south_bound, west_bound, east_bound))
     print("{}, {}, {}, {}".format(north_index, south_index, west_index, east_index))
  
-    map_values = map_values[south_index:north_index + 1, west_index:east_index + 1]
-   # map_values = map_values[north_index:south_index + 1, west_index:east_index + 1]
+    #map_values = map_values[south_index:north_index + 1, west_index:east_index + 1]
+    map_values = map_values[north_index:south_index + 1, west_index:east_index + 1]
     
+    print("{},{},{},{}".format(map_values[0][0], map_values[0][-1], map_values[-1][0], map_values[-1][-1]))
+
     # Defining geometry
     points = vtk.vtkPoints()
 
@@ -172,8 +173,8 @@ def load_map():
     # exploring the values
     for i, row in enumerate(map_values):
         for j, alt in enumerate(row):
-            lat = south_bound + i * DELTA_LAT_LON
-            lon = west_bound + j * DELTA_LAT_LON
+            lat = north_bound - i * DELTA_DEG
+            lon = west_bound + j * DELTA_DEG
 
             #print("{},{}".format(lat, lon))
             # converting to world coordinates
