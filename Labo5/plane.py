@@ -138,15 +138,50 @@ def load_plane():
 
     return actor
 
+
+
+px = [BOTTOM_LEFT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1], TOP_RIGHT_COORDINATES[1], TOP_LEFT_COORDINATES[1]]
+py = [BOTTOM_LEFT_COORDINATES[0], BOTTOM_RIGHT_COORDINATES[0], TOP_RIGHT_COORDINATES[0], TOP_LEFT_COORDINATES[0]]
+
+coeff = np.array([
+    [1, 0, 0, 0],
+    [1, 1, 0, 0], 
+    [1, 1, 1, 1],
+    [1, 0, 1, 0]
+])
+coeff_inv = np.linalg.inv(coeff)
+a = np.dot(coeff_inv,px)
+b = np.dot(coeff_inv,py)
+print("a: {}".format(a))
+def find_texture_coordinates(lat, lon):
+    #quadratic equation coeffs, aa*mm^2+bb*m+cc=0
+    aa = a[3]*b[2] - a[2]*b[3];
+    bb = a[3]*b[0] -a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + lon*b[3] - lat*a[3];
+    cc = a[1]*b[0] -a[0]*b[1] + lon*b[1] - lat*a[1];
+ 
+    #compute m = (-b+sqrt(b^2-4ac))/(2a)
+    det = math.sqrt(bb*bb - 4*aa*cc);
+    m = (-bb+det)/(2*aa);
+ 
+    #compute l
+    l = (lon-a[0]-a[2]*m)/(a[1]+a[3]*m);
+
+    #print("lat", lat, "lon", lon)
+    #print("m:", m, "l:", l)
+    return l, m
+
+    #return(x, y)
+
+
 def load_map():
     # Load the map
     map_values = np.fromfile(PATH_MAP, dtype=np.int16).reshape(GRID_WIDTH, GRID_WIDTH)
 
     # Select only the desired area
-    north_bound = max(TOP_LEFT_COORDINATES[0], TOP_RIGHT_COORDINATES[0])
-    south_bound = min(BOTTOM_RIGHT_COORDINATES[0], BOTTOM_LEFT_COORDINATES[0])
-    west_bound = min(TOP_LEFT_COORDINATES[1], BOTTOM_LEFT_COORDINATES[1])
-    east_bound = max(TOP_RIGHT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1])
+    north_bound = min(TOP_LEFT_COORDINATES[0], TOP_RIGHT_COORDINATES[0])
+    south_bound = max(BOTTOM_RIGHT_COORDINATES[0], BOTTOM_LEFT_COORDINATES[0])
+    west_bound = max(TOP_LEFT_COORDINATES[1], BOTTOM_LEFT_COORDINATES[1])
+    east_bound = min(TOP_RIGHT_COORDINATES[1], BOTTOM_RIGHT_COORDINATES[1])
 
     north_index = int(math.floor((MAX_LAT - north_bound) / DELTA_DEG))
     south_index = int(math.floor((MAX_LAT - south_bound) / DELTA_DEG))
@@ -186,7 +221,8 @@ def load_map():
             points.InsertNextPoint(x, y, z)
 
             # Adding the texture coordinates
-            texture_coords.InsertNextTuple(((j / x_size), 1 - (i / y_size)))
+            tcoords = find_texture_coordinates(lat, lon)
+            texture_coords.InsertNextTuple((tcoords[0], tcoords[1]))
 
 
     # creating a dataset
