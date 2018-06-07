@@ -126,6 +126,7 @@ def load_plane():
 
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
+    actor.PickableOff()
 
     return actor
 
@@ -184,6 +185,11 @@ def load_map():
     texture_coords = vtk.vtkFloatArray()
     texture_coords.SetNumberOfComponents(2)
 
+    # Setting the altitude of the current point as a point scalar
+    altitude_values = vtk.vtkIntArray()
+    #altitudeValues.SetNumberOfValues(xSize * ySize)
+
+
     # exploring the values
     for i, row in enumerate(map_values):
         for j, alt in enumerate(row):
@@ -199,6 +205,9 @@ def load_map():
             # Adding the texture coordinates
             tcoords = find_texture_coordinates(lat, lon)
             texture_coords.InsertNextTuple((tcoords[0], tcoords[1]))
+            
+            # Setting the altitude of the current point as a point scalar
+            altitude_values.InsertNextValue(alt)
 
 
     # creating a dataset
@@ -207,10 +216,12 @@ def load_map():
     grid.SetDimensions(east_index - west_index + 1, south_index - north_index + 1, 1)
     grid.SetPoints(points)
     grid.GetPointData().SetTCoords(texture_coords)
+    grid.GetPointData().SetScalars(altitude_values)
 
     # Create a mapper and actor
     mapper = vtk.vtkDataSetMapper()
     mapper.SetInputData(grid)
+    mapper.ScalarVisibilityOff()
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
 
@@ -230,6 +241,36 @@ def load_texture():
     return texture
 
 
+# Interactor
+class CustomInteractor(vtk.vtkInteractorStyleTrackballCamera):
+    def __init__(self, map_actor, parent=None):        
+        self.AddObserver("MouseMoveEvent", self.mouseMoveEvent)
+        self.map_actor = map_actor
+
+    def mouseMoveEvent(self, obj, event):
+        # picking the actor
+        clickPos = self.GetInteractor().GetEventPosition()
+        picker = vtk.vtkPointPicker()
+        picker.Pick(clickPos[0], clickPos[1], 0, self.GetDefaultRenderer())
+        actor_picked = picker.GetActor()
+    
+        if actor_picked != self.map_actor: # the map has not been picked, we do nothing
+            self.OnMouseMove()
+            return
+
+        altitude = picker.GetDataSet().GetPointData().GetScalars().GetValue(picker.GetPointId())
+        self.OnMouseMove()
+        return
+        
+
+def load_altitude_actor():
+    text_actor = vtk.vtkTextActor()
+    text_actor.setInput("")
+    
+    return textActor
+        
+        
+
 if __name__ == '__main__':
     renderer = vtk.vtkRenderer()
 
@@ -238,6 +279,9 @@ if __name__ == '__main__':
 
     plane_actor = load_plane()
     renderer.AddActor(plane_actor) # adds the plane actor
+
+    alt_actor = load_altitude_actor()
+
     renderer.SetBackground(0.2, 0.2, 0.4)
 
     # Moving the camera
@@ -261,6 +305,9 @@ if __name__ == '__main__':
 
     # start the interaction window and add TrackBall Style
     iren = vtk.vtkRenderWindowInteractor()
-    iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
     iren.SetRenderWindow(renWin)
+    iren.Initialize()
+    style = CustomInteractor(map_actor)
+    style.SetDefaultRenderer(renderer)
+    iren.SetInteractorStyle(style)
     iren.Start()
