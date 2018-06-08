@@ -240,12 +240,27 @@ def load_texture():
     texture.SetInputConnection(image_reader.GetOutputPort())
     return texture
 
+def load_altitude_actor():
+    text_actor = vtk.vtkCaptionActor2D()
+    text_actor.SetCaption("")
+
+    # Formatting
+    text_actor.GetCaptionTextProperty().SetColor( 1.0, 1.0, 1.0 )
+    text_actor.GetCaptionTextProperty().SetOpacity(0.9)
+    text_actor.GetCaptionTextProperty().SetBackgroundColor(0, 0.633, 0.91)
+    text_actor.GetCaptionTextProperty().BoldOn()
+    text_actor.GetCaptionTextProperty().SetFontSize(20)
+    text_actor.ThreeDimensionalLeaderOn()
+
+    return text_actor
+
 
 # Interactor
-class CustomInteractor(vtk.vtkInteractorStyleTrackballCamera):
-    def __init__(self, map_actor, parent=None):        
+class CustomInteractor(vtk.vtkInteractorStyleMultiTouchCamera):
+    def __init__(self, map_actor, text_actor, parent=None):        
         self.AddObserver("MouseMoveEvent", self.mouseMoveEvent)
         self.map_actor = map_actor
+        self.text_actor = text_actor
 
     def mouseMoveEvent(self, obj, event):
         # picking the actor
@@ -258,16 +273,16 @@ class CustomInteractor(vtk.vtkInteractorStyleTrackballCamera):
             self.OnMouseMove()
             return
 
+        # updating the altitude text
         altitude = picker.GetDataSet().GetPointData().GetScalars().GetValue(picker.GetPointId())
+        self.text_actor.SetCaption(str(altitude) + "m")
+        self.text_actor.SetAttachmentPoint(picker.GetDataSet().GetPoints().GetPoint(picker.GetPointId()))
+        self.GetInteractor().Render()
         self.OnMouseMove()
         return
         
 
-def load_altitude_actor():
-    text_actor = vtk.vtkTextActor()
-    text_actor.setInput("")
-    
-    return textActor
+
         
         
 
@@ -278,9 +293,10 @@ if __name__ == '__main__':
     renderer.AddActor(map_actor)
 
     plane_actor = load_plane()
-    renderer.AddActor(plane_actor) # adds the plane actor
+    renderer.AddActor(plane_actor) 
 
     alt_actor = load_altitude_actor()
+    renderer.AddActor(alt_actor)
 
     renderer.SetBackground(0.2, 0.2, 0.4)
 
@@ -307,7 +323,7 @@ if __name__ == '__main__':
     iren = vtk.vtkRenderWindowInteractor()
     iren.SetRenderWindow(renWin)
     iren.Initialize()
-    style = CustomInteractor(map_actor)
+    style = CustomInteractor(map_actor, alt_actor)
     style.SetDefaultRenderer(renderer)
     iren.SetInteractorStyle(style)
     iren.Start()
