@@ -252,33 +252,8 @@ def load_altitude_actor():
 
     return text_actor
 
-def load_level_actor(altitude, map_dataset):
-    sphere = vtk.vtkSphere()
-    sphere.SetCenter(0, 0, 0)
-    sphere.SetRadius(altitude + EARTH_RADIUS)
 
-    # creating the cutter
-    cutter = vtk.vtkCutter()
-    cutter.SetCutFunction(sphere)
-    cutter.SetInputData(map_dataset)
 
-    # making it as a tube
-    # using a stripper makes the tube smoother
-    stripper = vtk.vtkStripper()
-    stripper.SetInputConnection(cutter.GetOutputPort())
-    tubeFilter = vtk.vtkTubeFilter()
-    tubeFilter.SetRadius(40)
-    tubeFilter.SetInputConnection(stripper.GetOutputPort())
-
-    # creates the mapper and the actor
-    mapper = vtk.vtkDataSetMapper()
-    mapper.ScalarVisibilityOff()
-    mapper.SetInputConnection(tubeFilter.GetOutputPort())
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-    actor.GetProperty().SetColor(0, 0.633, 0.91)
-    
-    return actor
 
 # Interactor
 class CustomInteractor(vtk.vtkInteractorStyleMultiTouchCamera):
@@ -287,7 +262,45 @@ class CustomInteractor(vtk.vtkInteractorStyleMultiTouchCamera):
         self.AddObserver("MouseMoveEvent", self.mouseMoveEvent)
         self.map_actor = map_actor
         self.text_actor = text_actor
-        self.level_actor = None
+        self.level_cutter = None
+    
+    def _set_level_actor(self, altitude):
+        sphere = vtk.vtkSphere()
+        sphere.SetCenter(0, 0, 0)
+        sphere.SetRadius(altitude + EARTH_RADIUS)
+
+        # updating the cutter
+        self.level_cutter.SetCutFunction(sphere)
+
+    def _load_level_actor(self, map_dataset):
+        '''
+        sphere = vtk.vtkSphere()
+        sphere.SetCenter(0, 0, 0)
+        sphere.SetRadius(altitude + EARTH_RADIUS)
+        '''
+
+        # creating the cutter
+        self.level_cutter = vtk.vtkCutter()
+        #cutter.SetCutFunction(sphere)
+        self.level_cutter.SetInputData(map_dataset)
+
+        # making it as a tube
+        # using a stripper makes the tube smoother
+        stripper = vtk.vtkStripper()
+        stripper.SetInputConnection(self.level_cutter.GetOutputPort())
+        tubeFilter = vtk.vtkTubeFilter()
+        tubeFilter.SetRadius(40)
+        tubeFilter.SetInputConnection(stripper.GetOutputPort())
+
+        # creates the mapper and the actor
+        mapper = vtk.vtkDataSetMapper()
+        mapper.ScalarVisibilityOff()
+        mapper.SetInputConnection(tubeFilter.GetOutputPort())
+        level_actor = vtk.vtkActor()
+        level_actor.SetMapper(mapper)
+        level_actor.GetProperty().SetColor(0, 0.633, 0.91)
+        self.GetDefaultRenderer().AddActor(level_actor)
+        
 
     def mouseMoveEvent(self, obj, event):
         # picking the actor
@@ -307,10 +320,10 @@ class CustomInteractor(vtk.vtkInteractorStyleMultiTouchCamera):
         self.GetInteractor().Render()
 
         # generating level line
-        if(self.level_actor != None):
-            self.GetDefaultRenderer().RemoveActor(self.level_actor)
-        self.level_actor = load_level_actor(altitude, picker.GetDataSet())
-        self.GetDefaultRenderer().AddActor(self.level_actor)
+        if(self.level_cutter == None):
+            self._load_level_actor(picker.GetDataSet())  
+            
+        self._set_level_actor(altitude)
 
         self.OnMouseMove()
         return
